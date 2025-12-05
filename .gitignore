@@ -1,0 +1,10 @@
+node_modules
+*.log
+
+data/users/*
+data/groups/*
+!data/groups/.gitkeep
+!data/users/.gitkeep
+
+pnpm-*.yaml
+package-lock.json

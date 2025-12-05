@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>下一节课</title>
+    
+    <style>
+        /* 全局重置 */
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 450px;
+            position: relative;
+        }
+
+        /* --- 头部样式最终修正 --- */
+        .header-container {
+            position: relative;
+            margin-bottom: 40px;
+            /* 修正：调整 padding，并将内容对齐到顶部 */
+            padding: 15px 0 0 10px; 
+            height: 60px;
+            display: flex;
+            align-items: flex-start; /* 将内容对齐到容器顶部 */
+        }
+
+        /* 标题文字 - 位于最上层 */
+        h1 {
+            font-size: 28px;
+            font-weight: bold;
+            color: #222;
+            margin: 0;
+            position: relative;
+            z-index: 10;
+            line-height: 1.2;
+            padding-left: 10px;
+            padding-top: 2px;
+            text-shadow: 3px 3px 2px rgba(0,0,0,0.3);
+        }
+
+        /* 箭头容器 - 位于文字下方 */
+        .arrow-row {
+            position: absolute;
+            /* 修正：微调箭头位置，使其与文字新的顶部位置配合 */
+            top: 10px; 
+            left: 0px; 
+            display: flex;
+            z-index: 0;
+            opacity: 0.9;
+        }
+
+        /* 单个箭头样式 */
+        .arrow-shape {
+            width: 35px;
+            height: 50px; 
+            background-color: #bdcfff; 
+            clip-path: polygon(
+                0% 0%, 70% 0%, 100% 50%, 70% 100%, 0% 100%, 30% 50%
+            );
+            margin-right: 2px; 
+        }
+        /* --- 头部样式修正结束 --- */
+
+        /* 卡片样式 (保持不变) */
+        .course-card {
+            background-color: #e8e8e8;
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .avatar {
+            width: 80px;
+            height: 80px;
+            background-color: #dcdcdc;
+            border-radius: 16px;
+            flex-shrink: 0;
+            margin-right: 20px;
+        }
+
+        .info {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .username {
+            font-size: 18px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .course-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 10px;
+            position: relative;
+            display: inline-block;
+            width: fit-content;
+        }
+
+        .course-text {
+            background: linear-gradient(to top, #7fffd4 35%, transparent 35%);
+            padding-right: 10px;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 500;
+            color: #111;
+        }
+        
+        .footer {
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+            margin-top: 30px;
+        }
+
+        .type {
+            display: inline-block;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="header-container">
+        <div class="arrow-row">
+            <div class="arrow-shape"></div>
+            <div class="arrow-shape"></div>
+            <div class="arrow-shape"></div>
+            <div class="arrow-shape"></div>
+        </div>
+        
+        <h1>群友接下来上什么课？</h1>
+    </div>
+
+    {{each list item}}
+        <div class="course-card">
+            <div class="avatar">
+                <img src="{{item.avatar}}" alt="用户头像" style="width:100%; height:100%; border-radius:16px;">
+            </div>
+            <div class="info">
+                <div class="username">{{item.userName}}</div>
+                
+                {{if item.hasClass}}
+                    <div class="course-title course-text">
+                        {{item.className}}
+                    </div>
+                    <div class="meta-info">
+                        <span class="type" style="background-color: {{item.typeColor}};">{{item.type}}</span>
+                        <span>{{item.startTime}} - {{item.endTime}}</span>
+                    </div>
+                {{else}}
+                    <div class="course-title course-text">{{item.NoCourseTitle || "暂无课程信息"}}</div>
+                    <p style="margin:0; font-size:14px; color:#666;">{{item.NoCourseTip}}</p>
+                {{/if}}
+            </div>
+        </div>
+    {{/each}}
+
+    <br><br>
+    <div class="footer">Designed by Pimeng & MCZhang1723</div>
+</div>
+
+</body>
+</html>

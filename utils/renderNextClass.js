@@ -6,19 +6,14 @@ const USER_DATA_DIR = path.join(DATA_DIR, "users")
 const GROUP_DATA_DIR = path.join(DATA_DIR, "groups")
 
 /**
- * 获取群组中多个用户的下一节课信息用于HTML渲染（多人模式）
+ * 获取群组中多个用户的下一节课信息用于HTML渲染
  * @param {Object} e - 消息事件对象
- * @param {Array} userIds - 用户ID数组（可选，默认为群组中的所有用户）
  * @returns {Object} 包含渲染所需所有数据的对象
  */
-export async function getMultipleNextClassRenderData(e, userIds = null) {
+export async function getMultipleNextClassRenderData(e) {
   try {
     const groupId = e.group_id
-    
-    // 如果没有提供用户ID列表，则从群组用户列表中获取
-    if (!userIds) {
-      userIds = getAllUsersWithSchedule(groupId)
-    }
+    const userIds = getAllUsersWithSchedule(groupId)
     
     // 如果没有用户有课表数据
     if (!userIds || userIds.length === 0) {

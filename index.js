@@ -12,15 +12,6 @@ const GROUP_DATA_DIR = path.join("./plugins", "classtable", "data", "groups")
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true })
 }
-if (!fs.existsSync(USER_DATA_DIR)) {
-  fs.mkdirSync(USER_DATA_DIR, { recursive: true })
-}
-if (!fs.existsSync(GROUP_DATA_DIR)) {
-  fs.mkdirSync(GROUP_DATA_DIR, { recursive: true })
-}
-
-// 开学日期配置
-const SEMESTER_START_DATE = new Date("2025-09-01")
 
 export class classtable extends plugin {
   constructor() {
@@ -158,16 +149,6 @@ export class classtable extends plugin {
     }
   }
 
-  getSchedulePath(userId, groupId = null) {
-    // 新的存储方式：用户数据统一存储在 users/${user_id}.json
-    return path.join(USER_DATA_DIR, `${userId}.json`)
-  }
-
-  loadScheduleFromFile(filePath) {
-    const content = fs.readFileSync(filePath, 'utf8')
-    return JSON.parse(content)
-  }
-
   async getCourseScheduleFromApi(shareCode) {
     const url = `https://i.wakeup.fun/share_schedule/get?key=${shareCode}`
     const headers = {
@@ -299,43 +280,6 @@ export class classtable extends plugin {
     return cleanedWeeklySchedule
   }
 
-  // 计算当前周次
-  calculateCurrentWeek(startDate, currentDate) {
-    const deltaDays = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24))
-    return Math.floor(deltaDays / 7) + 1
-  }
-
-  // 获取今日课表
-  getTodaySchedule(schedule, testTime = null) {
-    const currentTime = testTime || new Date()
-    const currentWeek = this.calculateCurrentWeek(SEMESTER_START_DATE, currentTime).toString()
-    const currentDay = currentTime.getDay() === 0 ? 7 : currentTime.getDay() // 转换为1-7，代表周一到周日
-    
-    let result = ""
-    
-    if (schedule[currentWeek] && schedule[currentWeek][currentDay]) {
-      const periods = schedule[currentWeek][currentDay]
-      result += `今日课表 (周次: ${currentWeek}, 星期: ${currentDay}):\n`
-      
-      // 按节次排序
-      const sortedPeriods = Object.keys(periods).sort((a, b) => parseInt(a) - parseInt(b))
-      
-      for (const period of sortedPeriods) {
-        const classes = periods[period]
-        for (const course of classes) {
-          result += "====================\n"
-          result += `课程: ${course.courseName}\n`
-          result += `教师: ${course.teacher}\n`
-          result += `时间: ${course.startTime}-${course.endTime}\n`
-        }
-      }
-    } else {
-      result += "今日无课程安排。"
-    }
-    
-    return result
-  }
-  
   async showGroupNextClass(e) {
     try {
       const renderData = await getMultipleNextClassRenderData(e)

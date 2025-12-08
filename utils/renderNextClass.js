@@ -31,7 +31,7 @@ export async function getMultipleNextClassRenderData(e) {
     }
     
     const currentTime = new Date()
-    const currentWeek = calculateCurrentWeek(new Date("2025-09-01"), currentTime)
+    const currentWeek = calculateCurrentWeek(new Date("2025-09-01"), currentTime) // 开学日期请根据实际情况修改
     const currentDay = currentTime.getDay() === 0 ? 7 : currentTime.getDay()
     const currentHour = currentTime.getHours()
     const currentMinute = currentTime.getMinutes()
@@ -74,6 +74,8 @@ export async function getMultipleNextClassRenderData(e) {
             userName: userName,
             avatar: avatarUrl,
             hasClass: false,
+            type: "空闲",
+            typeColor: "#50ff05ff",
             NoCourseTitle: "今日课程已结束",
             NoCourseTip: "快去出勤吧"
           })
@@ -162,10 +164,9 @@ function getAllUsersWithSchedule(groupId) {
 /**
  * 获取课表文件路径
  * @param {string} userId - 用户ID
- * @returns {string} 文件路径
+ * @returns {string} 文件路径 
  */
 function getSchedulePath(userId) {
-  // 新的存储方式：用户数据统一存储在 users/${user_id}.json
   return path.join(USER_DATA_DIR, `${userId}.json`)
 }
 

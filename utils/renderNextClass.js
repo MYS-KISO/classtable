@@ -71,7 +71,7 @@ export async function getMultipleNextClassRenderData(e) {
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           userList.push({
-            userName: userName,
+            userName: (userName || "").length > 14 ? (userName.substring(0, 14) + "···") : userName,
             avatar: avatarUrl,
             hasClass: false,
             type: "空闲",
@@ -88,7 +88,7 @@ export async function getMultipleNextClassRenderData(e) {
           }
 
           userList.push({
-            userName: (userName || "").length > 10 ? (userName.substring(0, 8) + "···") : userName,
+            userName: (userName || "").length > 14 ? (userName.substring(0, 14) + "···") : userName,
             avatar: avatarUrl,
             hasClass: true,
             className: (nextClassInfo.courseName || "").length > 9 ? (nextClassInfo.courseName.substring(0, 9) + "···") : nextClassInfo.courseName,

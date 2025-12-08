@@ -31,7 +31,7 @@ export class classtable extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^#课表帮助$',
+          reg: '^课表插件帮助$',
           fnc: 'showMenu'
         },
         {
@@ -57,13 +57,12 @@ export class classtable extends plugin {
       const pluginResources = `./plugins/${pluginName}/resources`
       const tplFile = `${pluginResources}/html/${tplName}.html`
       
-      // 将渲染数据直接传递给puppeteer.screenshot，而不是放在data字段中
       const base64 = await puppeteer.screenshot(pluginName, {
         saveId: tplName,
         imgType: 'png',
         tplFile,
         pluginResources,
-        ...data  // 将数据对象展开，直接传递给puppeteer
+        ...data
       })
       
       if (base64) {
@@ -90,10 +89,8 @@ export class classtable extends plugin {
   }
 
   async importSchedule(e) {
+    await e.recall()
     try {
-      if (e.isGroup) {
-        await e.group.recallMsg(e.message_id)
-      }
       const match = e.msg.match(/这是来自「WakeUp课程表」的课表分享，30分钟内有效哦，如果失效请朋友再分享一遍叭。为了保护隐私我们选择不监听你的剪贴板，请复制这条消息后，打开App的主界面，右上角第二个按钮 -> 从分享口令导入，按操作提示即可完成导入~分享口令为「(.*)」/)
       if (!match) {
         await this.reply('无法识别分享口令，请确保发送完整的分享口令消息')
@@ -121,11 +118,11 @@ export class classtable extends plugin {
       
       // 隐藏分享码中间部分
       // const maskedShareCode = shareCode.substring(0, 2) + '*'.repeat(shareCode.length - 4) + shareCode.substring(shareCode.length - 2)
-      await this.reply(`导入课程表成功，重复导入将会覆盖之前的数据`)
+      await this.reply(`导入课程表成功，如果重复导入将会覆盖之前的数据\nBot正在尝试撤回你的口令，如果撤回失败请手动撤回哦~`)
       
     } catch (err) {
       logger.error(`[ClassTable] 导入课程表失败: ${err}`)
-      await this.reply(`课程表功能处理失败，可能是wakeup课程表APP的服务器问题，请联系开发者处理\n\n错误信息: ${err.message}`)
+      await this.reply(`课程表功能处理失败，可能是WakeUp课程表APP的服务器问题，请联系开发者处理\n\n错误信息: ${err.message}`)
     }
   }
 

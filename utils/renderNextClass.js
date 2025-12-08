@@ -41,7 +41,7 @@ export async function getMultipleNextClassRenderData(e) {
     
     for (const userId of userIds) {
       let userName = "未知用户"
-      let avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${userId}&s=640`
+      let avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${userId}&s=100`
       try {
         const memberInfo = e.bot.gml.get(e.group_id)
         const member = memberInfo.get(Number(userId))
@@ -68,8 +68,8 @@ export async function getMultipleNextClassRenderData(e) {
       try {
         const schedule = loadScheduleFromFile(filePath)
         const nextClassInfo = findNextClass(schedule, currentWeek, currentDay, currentHour, currentMinute)
-        
-        if (!nextClassInfo) {
+
+        if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           userList.push({
             userName: userName,
             avatar: avatarUrl,
@@ -78,21 +78,18 @@ export async function getMultipleNextClassRenderData(e) {
             NoCourseTip: "快去出勤吧"
           })
         } else {
-          const nowType = isIdle(currentTime, nextClassInfo.startTime)
-          let typeColor
-
-          if (nowType === "空闲中") {
-            typeColor = "#00FF00"
-          } else if (nowType === "上课中") {
-            typeColor = "#009dffff"
-          } else {
-            typeColor = "#ffb700ff"
+          let nowType = "将开始"
+          let typeColor = "#ffb700ff"
+          if (nextClassInfo.status === 'ongoing') {
+            nowType = "上课中"
+            typeColor = "#00eeffff"
           }
+
           userList.push({
-            userName: userName,
+            userName: (userName || "").length > 10 ? (userName.substring(0, 8) + "···") : userName,
             avatar: avatarUrl,
             hasClass: true,
-            className: nextClassInfo.courseName.length > 9 ? nextClassInfo.courseName.substring(0, 9) + "..." : nextClassInfo.courseName,
+            className: (nextClassInfo.courseName || "").length > 9 ? (nextClassInfo.courseName.substring(0, 9) + "···") : nextClassInfo.courseName,
             type: nowType,
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,
@@ -203,74 +200,57 @@ function calculateCurrentWeek(startDate, currentDate) {
  * @returns {Object|null} 下一节课信息或null
  */
 function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMinute) {
-  if (!schedule[currentWeek]) {
-    return null
+  // 若不存在当周数据或当日数据，直接判定今天没有课程
+  if (!schedule[currentWeek] || !schedule[currentWeek][currentDay]) {
+    return { status: 'noneToday' }
   }
-  if (schedule[currentWeek][currentDay]) {
-    const todayClasses = []
-    for (const [node, classes] of Object.entries(schedule[currentWeek][currentDay])) {
-      for (const cls of classes) {
-        todayClasses.push({
-          ...cls,
-          node: parseInt(node)
-        })
-      }
-    }
-    todayClasses.sort((a, b) => a.node - b.node)
-    for (const cls of todayClasses) {
-      const [startHour, startMinute] = cls.startTime.split(':').map(Number)
-      if (startHour > currentHour || (startHour === currentHour && startMinute > currentMinute)) {
-        return {
-          ...cls,
-          week: currentWeek
-        }
-      }
-    }
-  }
-  
-  // 如果今天没有更多课程，查找明天的课程
-  const nextDay = currentDay + 1
-  const nextWeek = nextDay > 7 ? currentWeek + 1 : currentWeek
-  const targetDay = nextDay > 7 ? 1 : nextDay
-  if (schedule[nextWeek] && schedule[nextWeek][targetDay]) {
-    const tomorrowClasses = []
-    for (const [node, classes] of Object.entries(schedule[nextWeek][targetDay])) {
-      for (const cls of classes) {
-        tomorrowClasses.push({
-          ...cls,
-          node: parseInt(node)
-        })
-      }
-    }
-    tomorrowClasses.sort((a, b) => a.node - b.node)
-    if (tomorrowClasses.length > 0) {
-      return {
-        ...tomorrowClasses[0],
-        week: nextWeek
-      }
-    }
-  }
-  
-  return null
-}
 
-/**
- * 判断当前有没有在上课
- * @param {Date} currentTime 
- * @param {string} nextClassStartTime 
- * @returns {string} "空闲中" 、"上课中" "将开始"
- */
-function isIdle(currentTime, nextClassStartTime) {
-  const currentHour = currentTime.getHours()
-  const currentMinute = currentTime.getMinutes()
-  const [nextHour, nextMinute] = nextClassStartTime.split(':').map(Number)
-  if (currentHour > nextHour || (currentHour === nextHour && currentMinute >= nextMinute)) {
-    return "空闲中"
+  const todayClasses = []
+  for (const [node, classes] of Object.entries(schedule[currentWeek][currentDay])) {
+    for (const cls of classes) {
+      todayClasses.push({
+        ...cls,
+        node: parseInt(node)
+      })
+    }
   }
-  if (currentHour < nextHour || (currentHour === nextHour && currentMinute < nextMinute)) {
-    return "将开始"
+
+  // 如果今天根本没有课程
+  if (todayClasses.length === 0) {
+    return { status: 'noneToday' }
   }
-  return "上课中"
+
+  todayClasses.sort((a, b) => a.node - b.node)
+
+  // 优先查找当前正在上的课程
+  for (const cls of todayClasses) {
+    const [startHour, startMinute] = cls.startTime.split(':').map(Number)
+    const [endHour, endMinute] = cls.endTime.split(':').map(Number)
+    const afterStart = (currentHour > startHour) || (currentHour === startHour && currentMinute >= startMinute)
+    const beforeEnd = (currentHour < endHour) || (currentHour === endHour && currentMinute < endMinute)
+    if (afterStart && beforeEnd) {
+      return {
+        ...cls,
+        week: currentWeek,
+        status: 'ongoing'
+      }
+    }
+  }
+
+  // 没有正在上的课程，找下一节（仅限今天）
+  for (const cls of todayClasses) {
+    const [startHour, startMinute] = cls.startTime.split(':').map(Number)
+    if (startHour > currentHour || (startHour === currentHour && startMinute > currentMinute)) {
+      return {
+        ...cls,
+        week: currentWeek,
+        status: 'next'
+      }
+    }
+  }
+
+  // 今天有课程但已经结束
+  return { status: 'noneToday' }
 }
 
 export default {

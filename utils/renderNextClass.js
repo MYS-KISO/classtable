@@ -31,7 +31,6 @@ export async function getMultipleNextClassRenderData(e) {
     }
     
     const currentTime = new Date()
-    const currentWeek = calculateCurrentWeek(new Date("2025-09-01"), currentTime) // 开学日期请根据实际情况修改
     const currentDay = currentTime.getDay() === 0 ? 7 : currentTime.getDay()
     const currentHour = currentTime.getHours()
     const currentMinute = currentTime.getMinutes()
@@ -66,7 +65,13 @@ export async function getMultipleNextClassRenderData(e) {
       }
       
       try {
-        const schedule = loadScheduleFromFile(filePath)
+        const scheduleData = loadScheduleFromFile(filePath)
+        const schedule = scheduleData.schedule || scheduleData // 兼容新旧数据格式
+        
+        // 获取该用户的开学日期，如果没有则使用默认值
+        const userStartDate = scheduleData.startDate || "2025-09-01"
+        const currentWeek = calculateCurrentWeek(new Date(userStartDate), currentTime)
+        
         const nextClassInfo = findNextClass(schedule, currentWeek, currentDay, currentHour, currentMinute)
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {

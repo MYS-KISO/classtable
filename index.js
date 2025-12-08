@@ -74,8 +74,7 @@ export class classtable extends plugin {
       `2. 复制分享口令，全部内容直接发送在群里\n` +
       `3. Bot会自动识别并导入课程表\n` +
       `4. 导入成功后，Bot会自动撤回分享口令\n` +
-      `查看群友目前在不在上课：发送【群友在上什么课】\n`
-
+      `查看群友目前在不在上课：发送【群友在上什么课】`
     await this.reply(msg)
   }
 
@@ -91,7 +90,7 @@ export class classtable extends plugin {
       const jsonData = await this.getCourseScheduleFromApi(shareCode)
       if (!jsonData || jsonData.status !== 1 || jsonData.message !== "success" || !jsonData.data) {
         logger.warn(`[ClassTable] 导入课程表失败: ${JSON.stringify(jsonData)}`)
-        await this.reply(`导入课程表失败，请检查分享口令是否正确或是否已过期\n\n错误返回值: ${JSON.stringify(jsonData)}`)
+        await this.reply(`尝试导入课程表失败，请检查分享口令是否正确或是否已过期\n\n错误返回值: ${JSON.stringify(jsonData)}`)
         return
       }
       const courseSchedule = this.generateCourseScheduleFromData(jsonData)
@@ -109,7 +108,7 @@ export class classtable extends plugin {
       
       // 隐藏分享码中间部分
       // const maskedShareCode = shareCode.substring(0, 2) + '*'.repeat(shareCode.length - 4) + shareCode.substring(shareCode.length - 2)
-      await this.reply(`导入课程表成功，如果重复导入将会覆盖之前的数据\nBot正在尝试撤回你的口令，如果撤回失败请手动撤回哦~`)
+      await this.reply(`QwQ导入课程表成功，如果重复导入将会覆盖之前的数据\nBot正在尝试撤回你的口令，如果撤回失败请手动撤回哦~`)
       
     } catch (err) {
       logger.error(`[ClassTable] 导入课程表失败: ${err}`)
@@ -197,6 +196,7 @@ export class classtable extends plugin {
     
     // 获取开学日期和最大周数
     const maxWeek = settings.maxWeek || 18
+    const startDate = settings.startDate || "2025-09-01" // 从设置中获取开学日期，如果没有则使用默认值
     
     // 生成完整的课程表数据
     const courseSchedule = []
@@ -277,7 +277,14 @@ export class classtable extends plugin {
       }
     }
     
-    return cleanedWeeklySchedule
+    // 添加元数据，包括开学日期
+    const result = {
+      schedule: cleanedWeeklySchedule,
+      startDate: startDate,
+      maxWeek: maxWeek
+    }
+    
+    return result
   }
 
   async showGroupNextClass(e) {

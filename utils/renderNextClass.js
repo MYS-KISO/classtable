@@ -76,7 +76,7 @@ export async function getMultipleNextClassRenderData(e) {
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           userList.push({
-            userName: (userName || "").length > 14 ? (userName.substring(0, 14) + "···") : userName,
+            userName: (userName || "").length > 14 ? (userName.substring(0, 14) + "...") : userName,
             avatar: avatarUrl,
             hasClass: false,
             type: "空闲",
@@ -92,11 +92,26 @@ export async function getMultipleNextClassRenderData(e) {
             typeColor = "#00eeffff"
           }
 
+          // 检查用户是否翘课
+          const redisKey = `classtable:skip:${userId}`
+          let isSkippingClass = false
+          try {
+            isSkippingClass = !!(await redis.get(redisKey))
+          } catch (error) {
+            logger.error(`[ClassTable] 检查翘课状态失败: ${error}`)
+          }
+
+          // 如果用户翘课且课程状态为'ongoing'或'next'，则显示翘课状态
+          if (isSkippingClass && (nextClassInfo.status === 'ongoing' || nextClassInfo.status === 'next')) {
+            nowType = "翘课中"
+            typeColor = "#ff4757ff"
+          }
+
           userList.push({
-            userName: (userName || "").length > 14 ? (userName.substring(0, 14) + "···") : userName,
+            userName: (userName || "").length > 14 ? (userName.substring(0, 14) + "...") : userName,
             avatar: avatarUrl,
             hasClass: true,
-            className: (nextClassInfo.courseName || "").length > 9 ? (nextClassInfo.courseName.substring(0, 9) + "···") : nextClassInfo.courseName,
+            className: (nextClassInfo.courseName || "").length > 9 ? (nextClassInfo.courseName.substring(0, 9) + "...") : nextClassInfo.courseName,
             type: nowType,
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,
@@ -229,14 +244,49 @@ function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMi
   todayClasses.sort((a, b) => a.node - b.node)
 
   // 优先查找当前正在上的课程
-  for (const cls of todayClasses) {
+  for (let i = 0; i < todayClasses.length; i++) {
+    const cls = todayClasses[i]
     const [startHour, startMinute] = cls.startTime.split(':').map(Number)
     const [endHour, endMinute] = cls.endTime.split(':').map(Number)
     const afterStart = (currentHour > startHour) || (currentHour === startHour && currentMinute >= startMinute)
     const beforeEnd = (currentHour < endHour) || (currentHour === endHour && currentMinute < endMinute)
     if (afterStart && beforeEnd) {
+      // 找到了当前正在上的课程，检查是否有连续的相同课程
+      let finalEndTime = cls.endTime
+      let finalClass = cls
+      
+      // 向后查找连续的相同课程
+      for (let j = i + 1; j < todayClasses.length; j++) {
+        const nextCls = todayClasses[j]
+        
+        // 检查课程名称是否相同
+        if (nextCls.courseName === cls.courseName) {
+          // 计算两节课之间的间隔时间（分钟）
+          const [currentEndHour, currentEndMinute] = finalEndTime.split(':').map(Number)
+          const [nextStartHour, nextStartMinute] = nextCls.startTime.split(':').map(Number)
+          
+          const currentEndMinutes = currentEndHour * 60 + currentEndMinute
+          const nextStartMinutes = nextStartHour * 60 + nextStartMinute
+          const interval = nextStartMinutes - currentEndMinutes
+          
+          // 如果间隔不超过30分钟，认为是连续课程
+          if (interval <= 30) {
+            finalEndTime = nextCls.endTime
+            finalClass = nextCls
+          } else {
+            // 间隔超过30分钟，不再认为是连续课程
+            break
+          }
+        } else {
+          // 课程名称不同，停止查找
+          break
+        }
+      }
+      
       return {
-        ...cls,
+        ...finalClass,
+        startTime: cls.startTime, // 保持第一节课程的开始时间
+        endTime: finalEndTime,    // 使用最后一节相同课程的结束时间
         week: currentWeek,
         status: 'ongoing'
       }
@@ -244,11 +294,46 @@ function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMi
   }
 
   // 没有正在上的课程，找下一节（仅限今天）
-  for (const cls of todayClasses) {
+  for (let i = 0; i < todayClasses.length; i++) {
+    const cls = todayClasses[i]
     const [startHour, startMinute] = cls.startTime.split(':').map(Number)
     if (startHour > currentHour || (startHour === currentHour && startMinute > currentMinute)) {
+      // 找到了下一节课，检查是否有连续的相同课程
+      let finalEndTime = cls.endTime
+      let finalClass = cls
+      
+      // 向后查找连续的相同课程
+      for (let j = i + 1; j < todayClasses.length; j++) {
+        const nextCls = todayClasses[j]
+        
+        // 检查课程名称是否相同
+        if (nextCls.courseName === cls.courseName) {
+          // 计算两节课之间的间隔时间（分钟）
+          const [currentEndHour, currentEndMinute] = finalEndTime.split(':').map(Number)
+          const [nextStartHour, nextStartMinute] = nextCls.startTime.split(':').map(Number)
+          
+          const currentEndMinutes = currentEndHour * 60 + currentEndMinute
+          const nextStartMinutes = nextStartHour * 60 + nextStartMinute
+          const interval = nextStartMinutes - currentEndMinutes
+          
+          // 如果间隔不超过30分钟，认为是连续课程
+          if (interval <= 30) {
+            finalEndTime = nextCls.endTime
+            finalClass = nextCls
+          } else {
+            // 间隔超过30分钟，不再认为是连续课程
+            break
+          }
+        } else {
+          // 课程名称不同，停止查找
+          break
+        }
+      }
+      
       return {
-        ...cls,
+        ...finalClass,
+        startTime: cls.startTime, // 保持第一节课程的开始时间
+        endTime: finalEndTime,    // 使用最后一节相同课程的结束时间
         week: currentWeek,
         status: 'next'
       }

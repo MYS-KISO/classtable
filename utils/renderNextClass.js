@@ -129,6 +129,16 @@ export async function getMultipleNextClassRenderData(e) {
       }
     }
     
+    // 对用户列表进行排序：有课的用户排在前面，没课的用户排在后面
+    userList.sort((a, b) => {
+      // 如果两个用户都有课或都没课，保持原顺序
+      if (a.hasClass === b.hasClass) {
+        return 0
+      }
+      // 有课的用户(a)排在没课的用户(b)前面
+      return a.hasClass ? -1 : 1
+    })
+    
     const result = {
       list: userList
     }

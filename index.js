@@ -2,7 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import plugin from "../../lib/plugins/plugin.js"
 import puppeteer from "../../lib/puppeteer/puppeteer.js"
-import { getMultipleNextClassRenderData } from "./utils/renderNextClass.js"
+import { getMultipleNextClassRenderData, getAllUsersNextClassRenderData } from "./utils/renderNextClass.js"
 import { isInClassTime, findConsecutiveClasses, parseTimeString } from "./utils/timeUtils.js"
 import { userScheduleCache, getUserScheduleCacheKey, getSkipClassCacheKey } from "./utils/cacheUtils.js"
 
@@ -31,8 +31,16 @@ export class classtable extends plugin {
           fnc: 'importSchedule'
         },
         {
+          reg: '^所有群友在上什么课$',
+          fnc: 'showAllGroupNextClass'
+        },
+        {
           reg: '^群友在上什么课$',
           fnc: 'showGroupNextClass'
+        },
+        {
+          reg: '^所有人在上什么课$',
+          fnc: 'showAllNextClass'
         },
         {
           reg: '^什么(水|专业|普通|神人|sb)课，翘了！$',
@@ -83,7 +91,10 @@ export class classtable extends plugin {
       `2. 复制分享口令，全部内容直接发送在群里\n` +
       `3. Bot会自动识别并导入课程表\n` +
       `4. 导入成功后，Bot会自动撤回分享口令\n` +
-      `查看群友目前在不在上课：发送【群友在上什么课】\n` +
+      `查看群友目前在不在上课：\n` +
+      `- 【所有群友在上什么课】- 显示群内所有用户的上课情况\n` +
+      `- 【群友在上什么课】- 只显示目前状态中前10的用户\n` +
+      `- 【所有人在上什么课】- 显示插件中保存的所有人的上课情况\n` +
       `翘课：发送【什么水课，翘了！】\n` +
       `取消翘课：发送【哎不翘了还是】`
     await this.reply(msg)
@@ -309,13 +320,33 @@ export class classtable extends plugin {
     return result
   }
 
-  async showGroupNextClass(e) {
+  async showAllGroupNextClass(e) {
     try {
       const renderData = await getMultipleNextClassRenderData(e)
       await this.renderImg('classtable', 'next_class', renderData)
     } catch (error) {
       logger.error(`[ClassTable] 显示群组下一节课失败: ${error}`)
       await this.reply("获取群课表信息时发生错误")
+    }
+  }
+
+  async showGroupNextClass(e) {
+    try {
+      const renderData = await getMultipleNextClassRenderData(e, 10)
+      await this.renderImg('classtable', 'next_class', renderData)
+    } catch (error) {
+      logger.error(`[ClassTable] 显示群组下一节课失败: ${error}`)
+      await this.reply("获取群课表信息时发生错误")
+    }
+  }
+
+  async showAllNextClass(e) {
+    try {
+      const renderData = await getAllUsersNextClassRenderData(e)
+      await this.renderImg('classtable', 'next_class', renderData)
+    } catch (error) {
+      logger.error(`[ClassTable] 显示所有人下一节课失败: ${error}`)
+      await this.reply("获取所有人的课表信息时发生错误")
     }
   }
 
@@ -491,3 +522,5 @@ export class classtable extends plugin {
     }
   }
 }
+
+logger.mark(`[ClassTable] 插件加载完成`)

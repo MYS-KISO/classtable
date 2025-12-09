@@ -105,9 +105,13 @@ export const userScheduleCache = new MemoryCache(100, 10 * 60 * 1000) // 10分�
 /**
  * 生成群组查询缓存键
  * @param {string} groupId - 群组ID
+ * @param {number} limit - 限制数量，可选
  * @returns {string} 缓存键
  */
-export function getGroupCacheKey(groupId) {
+export function getGroupCacheKey(groupId, limit) {
+  if (limit && limit > 0) {
+    return `group_query:${groupId}:${limit}`
+  }
   return `group_query:${groupId}`
 }
 

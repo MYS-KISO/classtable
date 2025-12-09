@@ -357,7 +357,7 @@ export class classtable extends plugin {
       // 获取用户当前课程信息
       const filePath = path.join(USER_DATA_DIR, `${userId}.json`)
       if (!fs.existsSync(filePath)) {
-        await this.reply("你还没有导入课表，无法翘课哦~")
+        await this.reply("你还没有导入课表，不知道你要翘什么课哦")
         return
       }
       
@@ -488,9 +488,9 @@ export class classtable extends plugin {
 
       await redis.set(skipKey, "1", { EX: expireTime })
 
-      // const classType = isNextClass ? "下一节课" : "当前课程"
-      // await this.reply(`已标记翘课${classType}《${currentClass.courseName}》！翘课状态将持续到${currentClass.endTime}qwq`)
-      await this.reply(`兄弟好翘`)
+      const classType = isNextClass ? "下一节课" : "当前课程"
+      await this.reply(`已标记翘课${classType}《${currentClass.courseName}》！翘课状态将持续到${currentClass.endTime}qwq`)
+      // await this.reply(`兄弟好翘`)
       
     } catch (error) {
       logger.error(`[ClassTable] 翘课功能失败: ${error}`)

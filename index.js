@@ -1,9 +1,10 @@
 import fs from "node:fs"
 import path from "node:path"
-import fetch from "node-fetch"
 import plugin from "../../lib/plugins/plugin.js"
 import puppeteer from "../../lib/puppeteer/puppeteer.js"
 import { getMultipleNextClassRenderData } from "./utils/renderNextClass.js"
+import { isInClassTime, findConsecutiveClasses, parseTimeString } from "./utils/timeUtils.js"
+import { userScheduleCache, getUserScheduleCacheKey, getSkipClassCacheKey } from "./utils/cacheUtils.js"
 
 const DATA_DIR = path.join("./plugins", "classtable", "data")
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
@@ -34,7 +35,7 @@ export class classtable extends plugin {
           fnc: 'showGroupNextClass'
         },
         {
-          reg: '^什么水课，翘了！$',
+          reg: '^什么(水|专业|普通|神人|sb)课，翘了！$',
           fnc: 'skipClass'
         },
         {
@@ -168,7 +169,20 @@ export class classtable extends plugin {
     }
     
     try {
-      const response = await fetch(url, { headers, timeout: 5000 })
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      
+      const response = await fetch(url, { 
+        headers, 
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       return await response.json()
     } catch (err) {
       logger.error(`[ClassTable] API请求失败: ${err}`)
@@ -316,7 +330,14 @@ export class classtable extends plugin {
         return
       }
       
-      const scheduleData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+      const cacheKey = getUserScheduleCacheKey(userId)
+      let scheduleData = userScheduleCache.get(cacheKey)
+      
+      if (!scheduleData) {
+        scheduleData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+        userScheduleCache.set(cacheKey, scheduleData)
+      }
+      
       const schedule = scheduleData.schedule || scheduleData
       
       // 获取当前时间
@@ -351,48 +372,13 @@ export class classtable extends plugin {
         // 查找当前正在上的课程
         for (let i = 0; i < todayClasses.length; i++) {
           const cls = todayClasses[i]
-          const [startHour, startMinute] = cls.startTime.split(':').map(Number)
-          const [endHour, endMinute] = cls.endTime.split(':').map(Number)
-          const afterStart = (currentHour > startHour) || (currentHour === startHour && currentMinute >= startMinute)
-          const beforeEnd = (currentHour < endHour) || (currentHour === endHour && currentMinute < endMinute)
-          
-          if (afterStart && beforeEnd) {
+          if (isInClassTime(cls.startTime, cls.endTime, currentHour, currentMinute)) {
             // 找到了当前正在上的课程，检查是否有连续的相同课程
-            let finalEndTime = cls.endTime
-            let finalClass = cls
-            
-            // 向后查找连续的相同课程
-            for (let j = i + 1; j < todayClasses.length; j++) {
-              const nextCls = todayClasses[j]
-              
-              // 检查课程名称是否相同
-              if (nextCls.courseName === cls.courseName) {
-                // 计算两节课之间的间隔时间（分钟）
-                const [currentEndHour, currentEndMinute] = finalEndTime.split(':').map(Number)
-                const [nextStartHour, nextStartMinute] = nextCls.startTime.split(':').map(Number)
-                
-                const currentEndMinutes = currentEndHour * 60 + currentEndMinute
-                const nextStartMinutes = nextStartHour * 60 + nextStartMinute
-                const interval = nextStartMinutes - currentEndMinutes
-                
-                // 如果间隔不超过30分钟，认为是连续课程
-                if (interval <= 30) {
-                  finalEndTime = nextCls.endTime
-                  finalClass = nextCls
-                } else {
-                  // 间隔超过30分钟，不再认为是连续课程
-                  break
-                }
-              } else {
-                // 课程名称不同，停止查找
-                break
-              }
-            }
-            
+            const consecutiveResult = findConsecutiveClasses(todayClasses, i)
             currentClass = {
-              ...finalClass,
-              startTime: cls.startTime, // 保持第一节课程的开始时间
-              endTime: finalEndTime    // 使用最后一节相同课程的结束时间
+              ...consecutiveResult.finalClass,
+              startTime: consecutiveResult.startTime,
+              endTime: consecutiveResult.finalEndTime
             }
             break
           }
@@ -423,47 +409,18 @@ export class classtable extends plugin {
           // 查找最近1小时内的课程
           for (let i = 0; i < todayClasses.length; i++) {
             const cls = todayClasses[i]
+            const { hour: startHour, minute: startMinute } = parseTimeString(cls.startTime)
             const classTime = new Date(currentTime)
-            classTime.setHours(cls.startHour, cls.startMinute, 0, 0)
+            classTime.setHours(startHour, startMinute, 0, 0)
             
             // 如果课程开始时间在当前时间和1小时后之间
             if (classTime > currentTime && classTime <= oneHourLater) {
               // 找到了下一节课，检查是否有连续的相同课程
-              let finalEndTime = cls.endTime
-              let finalClass = cls
-              
-              // 向后查找连续的相同课程
-              for (let j = i + 1; j < todayClasses.length; j++) {
-                const nextCls = todayClasses[j]
-                
-                // 检查课程名称是否相同
-                if (nextCls.courseName === cls.courseName) {
-                  // 计算两节课之间的间隔时间（分钟）
-                  const [currentEndHour, currentEndMinute] = finalEndTime.split(':').map(Number)
-                  const [nextStartHour, nextStartMinute] = nextCls.startTime.split(':').map(Number)
-                  
-                  const currentEndMinutes = currentEndHour * 60 + currentEndMinute
-                  const nextStartMinutes = nextStartHour * 60 + nextStartMinute
-                  const interval = nextStartMinutes - currentEndMinutes
-                  
-                  // 如果间隔不超过30分钟，认为是连续课程
-                  if (interval <= 30) {
-                    finalEndTime = nextCls.endTime
-                    finalClass = nextCls
-                  } else {
-                    // 间隔超过30分钟，不再认为是连续课程
-                    break
-                  }
-                } else {
-                  // 课程名称不同，停止查找
-                  break
-                }
-              }
-              
+              const consecutiveResult = findConsecutiveClasses(todayClasses, i)
               currentClass = {
-                ...finalClass,
-                startTime: cls.startTime, // 保持第一节课程的开始时间
-                endTime: finalEndTime    // 使用最后一节相同课程的结束时间
+                ...consecutiveResult.finalClass,
+                startTime: consecutiveResult.startTime,
+                endTime: consecutiveResult.finalEndTime
               }
               isNextClass = true
               break
@@ -473,12 +430,12 @@ export class classtable extends plugin {
       }
       
       if (!currentClass) {
-        await this.reply("最近1小时内没有课，无法翘课哦~")
+        await this.reply("没课翘不了（")
         return
       }
       
       // 计算课程结束时间
-      const [endHour, endMinute] = currentClass.endTime.split(':').map(Number)
+      const { hour: endHour, minute: endMinute } = parseTimeString(currentClass.endTime)
       const endTime = new Date()
       endTime.setHours(endHour, endMinute, 0, 0)
       
@@ -489,13 +446,20 @@ export class classtable extends plugin {
       
       // 计算过期时间（秒）
       const expireTime = Math.floor((endTime - currentTime) / 1000)
-      
       // 在Redis中设置翘课标记
-      const redisKey = `classtable:skip:${userId}`
-      await redis.set(redisKey, "1", { EX: expireTime })
-      
-      const classType = isNextClass ? "下一节课" : "当前课程"
-      await this.reply(`已标记翘课${classType}《${currentClass.courseName}》！翘课状态将持续到${currentClass.endTime}qwq`)
+      const skipKey = getSkipClassCacheKey(userId)
+
+      const hasSkip = await redis.get(skipKey)
+      if (hasSkip) {
+        await this.reply("你已经翘过了")
+        return
+      }
+
+      await redis.set(skipKey, "1", { EX: expireTime })
+
+      // const classType = isNextClass ? "下一节课" : "当前课程"
+      // await this.reply(`已标记翘课${classType}《${currentClass.courseName}》！翘课状态将持续到${currentClass.endTime}qwq`)
+      await this.reply(`兄弟好翘`)
       
     } catch (error) {
       logger.error(`[ClassTable] 翘课功能失败: ${error}`)
@@ -506,10 +470,10 @@ export class classtable extends plugin {
   async cancelSkipClass(e) {
     try {
       const userId = e.user_id
-      const redisKey = `classtable:skip:${userId}`
+      const skipKey = getSkipClassCacheKey(userId)
       
       // 检查是否存在翘课标记
-      const skipStatus = await redis.get(redisKey)
+      const skipStatus = await redis.get(skipKey)
       
       if (!skipStatus) {
         await this.reply("你还没发起翘课哦")
@@ -517,7 +481,7 @@ export class classtable extends plugin {
       }
       
       // 删除翘课标记
-      await redis.del(redisKey)
+      await redis.del(skipKey)
       
       await this.reply("已为你取消翘课状态~")
       

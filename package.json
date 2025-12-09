@@ -13,8 +13,5 @@
     "schedule"
   ],
   "author": "Pimeng",
-  "license": "GPL-3.0",
-  "dependencies": {
-    "node-fetch": "^2.6.7"
-  }
+  "license": "GPL-3.0"
 }

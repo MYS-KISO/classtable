@@ -81,8 +81,8 @@ export async function getMultipleNextClassRenderData(e) {
             hasClass: false,
             type: "空闲",
             typeColor: "#50ff05ff",
-            NoCourseTitle: "今日课程已结束",
-            NoCourseTip: "快去出勤吧"
+            NoCourseTitle: "今日无课",
+            NoCourseTip: "好好休息一下吧"
           })
         } else {
           let nowType = "将开始"
@@ -129,14 +129,25 @@ export async function getMultipleNextClassRenderData(e) {
       }
     }
     
-    // 对用户列表进行排序：有课的用户排在前面，没课的用户排在后面
+    // 对用户列表进行排序：上课中→翘课中→将开始→空闲
     userList.sort((a, b) => {
-      // 如果两个用户都有课或都没课，保持原顺序
-      if (a.hasClass === b.hasClass) {
-        return 0
+      // 定义状态优先级
+      const statusPriority = {
+        '上课中': 1,
+        '翘课中': 2,
+        '将开始': 3,
+        '空闲': 4
       }
-      // 有课的用户(a)排在没课的用户(b)前面
-      return a.hasClass ? -1 : 1
+      
+      // 获取两个用户的状态
+      const statusA = a.hasClass ? a.type : '空闲'
+      const statusB = b.hasClass ? b.type : '空闲'
+      
+      // 按照优先级排序
+      const priorityA = statusPriority[statusA] || 999
+      const priorityB = statusPriority[statusB] || 999
+      
+      return priorityA - priorityB
     })
     
     const result = {

@@ -125,7 +125,7 @@ export async function getMultipleNextClassRenderData(e, limit = null) {
           }
 
           return {
-            userName: (userName || "").length > 14 ? (userName.substring(0, 14) + "...") : userName,
+            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
             avatar: avatarUrl,
             hasClass: true,
             className: (nextClassInfo.courseName || "").length > 10 ? (nextClassInfo.courseName.substring(0, 10) + "...") : nextClassInfo.courseName,
@@ -443,7 +443,7 @@ export async function getAllUsersNextClassRenderData(e, limit = null) {
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           return {
-            userName: (userName || "").length > 16 ? (userName.substring(0, 16) + "...") : userName,
+            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
             avatar: avatarUrl,
             hasClass: false,
             type: "空闲",

@@ -491,8 +491,8 @@ export async function getAllUsersNextClassRenderData(e, limit = null) {
             hasClass: false,
             type: "空闲",
             typeColor: "#50ff05ff",
-            NoCourseTitle: "今日无课",
-            NoCourseTip: "好好休息一下吧"
+            NoCourseTitle: "好耶！没课喵",
+            NoCourseTip: "休息吧喵"
           }
         } else {
           let nowType = "将开始"

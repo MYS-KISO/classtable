@@ -330,10 +330,24 @@ function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMi
   const todayClasses = []
   for (const [node, classes] of Object.entries(schedule[currentWeek][currentDay])) {
     for (const cls of classes) {
-      todayClasses.push({
-        ...cls,
-        node: parseInt(node)
-      })
+      // 检查单双周条件：type: 0=全周, 1=单周, 2=双周
+      const classType = cls.type || 0
+      let isValidWeek = true
+      
+      if (classType === 1 && (currentWeek % 2) === 0) {
+        // 单周(odd)，当前周为偶数，跳过
+        isValidWeek = false
+      } else if (classType === 2 && (currentWeek % 2) === 1) {
+        // 双周(even)，当前周为奇数，跳过
+        isValidWeek = false
+      }
+      
+      if (isValidWeek) {
+        todayClasses.push({
+          ...cls,
+          node: parseInt(node)
+        })
+      }
     }
   }
 

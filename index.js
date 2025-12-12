@@ -239,8 +239,9 @@ export class classtable extends plugin {
     for (const scheduleItem of schedule) {
       const courseId = scheduleItem.id
       const courseInfo = courseDict[courseId] || {}
-      const { startNode, step, day, startWeek, endWeek } = scheduleItem
+      const { startNode, step, day, startWeek, endWeek, teacher, room, type } = scheduleItem
       const courseName = courseInfo.courseName || "未知课程"
+      // type: 0 = 全周, 1 = 单周(odd), 2 = 双周(even)
       
       // 获取上课的时间段
       const classTimes = []
@@ -261,7 +262,10 @@ export class classtable extends plugin {
         day,
         startWeek,
         endWeek,
-        classTimes
+        classTimes,
+        teacher: teacher || '',
+        room: room || '',
+        type: type || 0
       }
       
       courseSchedule.push(courseEntry)
@@ -285,6 +289,10 @@ export class classtable extends plugin {
           weeklySchedule[week][day] = {}
         }
         
+        // 处理单双周：type === 1 表示单周(odd)，type === 2 表示双周(even)
+        if (entry.type === 1 && (week % 2) === 0) continue
+        if (entry.type === 2 && (week % 2) === 1) continue
+
         for (const time of entry.classTimes) {
           const node = time.node
           if (!weeklySchedule[week][day][node]) {
@@ -298,7 +306,10 @@ export class classtable extends plugin {
             endTime: time.endTime,
             week: week,
             startWeek: entry.startWeek,
-            endWeek: entry.endWeek
+            endWeek: entry.endWeek,
+            teacher: entry.teacher || '',
+            room: entry.room || '',
+            type: entry.type || 0
           })
         }
       }

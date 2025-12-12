@@ -54,11 +54,11 @@ export class classtable extends plugin {
           fnc: 'showAllNextClass'
         },
         {
-          reg: '^什么(水|专业|普通|神人|sb)课，翘了！$',
+          reg: '^什么(水|专业|普通|神人|sb)课(，)?翘了(！)?$',
           fnc: 'skipClass'
         },
         {
-          reg: '^哎不翘了还是$',
+          reg: '^哎不翘了(还是)?$',
           fnc: 'cancelSkipClass'
         }
       ]

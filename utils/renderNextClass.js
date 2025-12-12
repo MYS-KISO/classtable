@@ -1,7 +1,16 @@
 import fs from "node:fs"
 import path from "node:path"
-import { parseTimeString, isInClassTime, findConsecutiveClasses, getCurrentTimeMinutes, calculateTimeInterval } from './timeUtils.js'
-import { groupQueryCache, getGroupCacheKey, getSkipClassCacheKey } from './cacheUtils.js'
+import {
+  parseTimeString,
+  isInClassTime,
+  findConsecutiveClasses,
+  getCurrentTimeMinutes, calculateTimeInterval
+} from './time.js'
+import {
+  groupQueryCache,
+  getGroupCacheKey,
+  getSkipClassCacheKey
+} from './cache.js'
 
 const DATA_DIR = path.join("./plugins", "classtable", "data")
 const USER_DATA_DIR = path.join(DATA_DIR, "users")

@@ -2,9 +2,20 @@ import fs from "node:fs"
 import path from "node:path"
 import plugin from "../../lib/plugins/plugin.js"
 import puppeteer from "../../lib/puppeteer/puppeteer.js"
-import { getMultipleNextClassRenderData, getAllUsersNextClassRenderData } from "./utils/renderNextClass.js"
-import { isInClassTime, findConsecutiveClasses, parseTimeString } from "./utils/time.js"
-import { userScheduleCache, getUserScheduleCacheKey, getSkipClassCacheKey } from "./utils/cache.js"
+import {
+  getMultipleNextClassRenderData,
+  getAllUsersNextClassRenderData
+} from "./utils/renderNextClass.js"
+import {
+  isInClassTime,
+  findConsecutiveClasses,
+  parseTimeString
+} from "./utils/time.js"
+import {
+  userScheduleCache,
+  getUserScheduleCacheKey,
+  getSkipClassCacheKey
+} from "./utils/cache.js"
 
 const DATA_DIR = path.join("./plugins", "classtable", "data");
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users");

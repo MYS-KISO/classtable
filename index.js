@@ -4,12 +4,14 @@ import plugin from "../../lib/plugins/plugin.js"
 import puppeteer from "../../lib/puppeteer/puppeteer.js"
 import {
   getMultipleNextClassRenderData,
-  getAllUsersNextClassRenderData
+  getAllUsersNextClassRenderData,
+  findNextClass
 } from "./utils/renderNextClass.js"
 import {
   isInClassTime,
   findConsecutiveClasses,
-  parseTimeString
+  parseTimeString,
+  getCurrentTimeMinutes
 } from "./utils/time.js"
 import {
   userScheduleCache,
@@ -60,6 +62,11 @@ export class classtable extends plugin {
         {
           reg: '^哎不翘了(还是)?$',
           fnc: 'cancelSkipClass'
+        },
+        {
+          reg: '',
+          fnc: 'checkAtUserClassStatus',
+          log: false
         }
       ]
     })
@@ -542,6 +549,101 @@ export class classtable extends plugin {
     } catch (error) {
       logger.error(`[ClassTable] 取消翘课功能失败: ${error}`)
       await e.reply("取消翘课失败，请稍后再试")
+    }
+  }
+
+  /**
+   * 检查@用户是否正在上课
+   * @param {Object} e - 消息事件对象
+   */
+  async checkAtUserClassStatus(e) {
+    // 只处理群组消息中的@消息
+    if (!e.isGroup) {
+      return false
+    }
+
+    // 检查消息中是否包含@内容
+    const atMessages = e.message.filter(m => m.type === 'at')
+    if (atMessages.length === 0) {
+      return false
+    }
+
+    // 遍历所有被@的用户
+    for (const atMsg of atMessages) {
+      const atUserId = atMsg.qq
+      await this.checkUserInClassAndReply(e, atUserId)
+    }
+
+    return false
+  }
+
+  /**
+   * 检查用户是否正在上课并回复
+   * @param {Object} e - 消息事件对象
+   * @param {string} userId - 被检查的用户ID
+   */
+  async checkUserInClassAndReply(e, userId) {
+    try {
+      // 检查用户是否有课表数据
+      const filePath = path.join(USER_DATA_DIR, `${userId}.json`)
+      if (!fs.existsSync(filePath)) {
+        return // 用户没有课表数据，不处理
+      }
+
+      // 获取当前时间
+      const currentTime = new Date()
+      const currentDay = currentTime.getDay() === 0 ? 7 : currentTime.getDay()
+      const currentHour = currentTime.getHours()
+      const currentMinute = currentTime.getMinutes()
+
+      // 使用缓存获取用户课表数据
+      const cacheKey = getUserScheduleCacheKey(userId)
+      let scheduleData = userScheduleCache.get(cacheKey)
+
+      if (!scheduleData) {
+        // 缓存中没有，从文件读取
+        scheduleData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+        userScheduleCache.set(cacheKey, scheduleData)
+      }
+
+      const schedule = scheduleData.schedule || scheduleData
+
+      // 获取该用户的开学日期，如果没有则使用默认值
+      const userStartDate = scheduleData.startDate || "2025-09-01"
+      const currentWeek = Math.floor((currentTime - new Date(userStartDate)) / (1000 * 60 * 60 * 24 * 7)) + 1
+
+      // 查找当前正在上的课程
+      const nextClassInfo = findNextClass(schedule, currentWeek, currentDay, currentHour, currentMinute)
+
+      // 如果用户正在上课
+      if (nextClassInfo && nextClassInfo.status === 'ongoing') {
+        // 检查用户是否翘课
+        const skipKey = getSkipClassCacheKey(userId)
+        let isSkippingClass = false
+        try {
+          isSkippingClass = !!(await redis.get(skipKey))
+        } catch (error) {
+          logger.error(`[ClassTable] 检查翘课状态失败: ${error}`)
+        }
+
+        // 如果用户没有翘课，发送提醒
+        if (!isSkippingClass) {
+          // 获取用户昵称
+          let userName = `用户${userId}`
+          try {
+            const memberInfo = e.bot.gml.get(e.group_id)
+            const member = memberInfo.get(Number(userId))
+            userName = member?.card || member?.nickname || `用户${userId}`
+          } catch (err) {
+            userName = `用户${userId}`
+          }
+
+          const message = `⚠️ ${userName} 正在上《${nextClassInfo.courseName}》，预计${nextClassInfo.endTime}下课`
+          await e.reply(message, true)
+        }
+      }
+    } catch (error) {
+      logger.error(`[ClassTable] 检查用户上课状态失败: ${error}`)
     }
   }
 }

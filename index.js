@@ -346,7 +346,7 @@ export class classtable extends plugin {
   async showAllGroupNextClass(e) {
     try {
       const renderData = await getMultipleNextClassRenderData(e)
-      await this.renderImg('classtable', 'next_class', renderData)
+      await this.renderImg('classtable', 'next_class', renderData, e)
     } catch (error) {
       logger.error(`[ClassTable] 显示群组下一节课失败: ${error}`)
       await e.reply("获取群课表信息时发生错误")
@@ -356,7 +356,7 @@ export class classtable extends plugin {
   async showGroupNextClass(e) {
     try {
       const renderData = await getMultipleNextClassRenderData(e, 10)
-      await this.renderImg('classtable', 'next_class', renderData)
+      await this.renderImg('classtable', 'next_class', renderData, e)
     } catch (error) {
       logger.error(`[ClassTable] 显示群组下一节课失败: ${error}`)
       await e.reply("获取群课表信息时发生错误")
@@ -366,7 +366,7 @@ export class classtable extends plugin {
   async showAllNextClass(e) {
     try {
       const renderData = await getAllUsersNextClassRenderData(e)
-      await this.renderImg('classtable', 'next_class', renderData)
+      await this.renderImg('classtable', 'next_class', renderData, e)
     } catch (error) {
       logger.error(`[ClassTable] 显示所有人下一节课失败: ${error}`)
       await e.reply("获取所有人的课表信息时发生错误")

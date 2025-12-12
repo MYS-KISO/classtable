@@ -1,3 +1,65 @@
+/**
+ * 自动同步群成员与课表用户，维护群组用户列表
+ * @param {string} groupId - 群号
+ * @param {Object} memberInfo - e.bot.gml.get(e.group_id) 返回的成员 Map
+ * @returns {Array} 有课表数据的群成员 QQ 号数组
+ */
+function syncGroupUserListWithMembers(groupId, memberInfo) {
+  try {
+    // 获取所有群成员 QQ 号
+    const memberIds = Array.from(memberInfo.keys()).map(String)
+    // 过滤出有课表数据的成员
+    const validUserIds = memberIds.filter(userId => {
+      const userFilePath = path.join(USER_DATA_DIR, `${userId}.json`)
+      return fs.existsSync(userFilePath)
+    })
+    // 群组用户列表文件路径
+    const groupUserListPath = path.join(GROUP_DATA_DIR, `${groupId}_userlist.json`)
+    let oldUserIds = []
+    if (fs.existsSync(groupUserListPath)) {
+      try {
+        oldUserIds = JSON.parse(fs.readFileSync(groupUserListPath, 'utf8'))
+      } catch {}
+    }
+    // 只保留当前群成员且有课表的用户
+    // 写回文件（去重）
+    fs.writeFileSync(groupUserListPath, JSON.stringify(validUserIds, null, 2), 'utf8')
+    return validUserIds
+  } catch (error) {
+    logger.error(`[ClassTable] 同步群组用户列表失败: ${error}`)
+    return []
+  }
+}
+
+// 兼容原有接口，自动同步群成员与课表用户
+function getAllUsersWithSchedule(groupId, memberInfo = null) {
+  try {
+    // 如果传入了memberInfo，则自动同步
+    if (memberInfo) {
+      return syncGroupUserListWithMembers(groupId, memberInfo)
+    }
+    // 否则走原有逻辑
+    const groupUserListPath = path.join(GROUP_DATA_DIR, `${groupId}_userlist.json`)
+    if (!fs.existsSync(groupUserListPath)) {
+      logger.info(`[ClassTable] 群组${groupId}的用户列表文件不存在`)
+      return []
+    }
+    const content = fs.readFileSync(groupUserListPath, 'utf8')
+    const userIds = JSON.parse(content)
+    // 过滤出实际存在课表文件的用户
+    const validUserIds = []
+    for (const userId of userIds) {
+      const userFilePath = path.join(USER_DATA_DIR, `${userId}.json`)
+      if (fs.existsSync(userFilePath)) {
+        validUserIds.push(userId)
+      }
+    }
+    return validUserIds
+  } catch (error) {
+    logger.error(`[ClassTable] 获取群组用户列表失败: ${error}`)
+    return []
+  }
+}
 import fs from "node:fs"
 import path from "node:path"
 import {
@@ -25,7 +87,9 @@ const GROUP_DATA_DIR = path.join(DATA_DIR, "groups")
 export async function getMultipleNextClassRenderData(e, limit = null) {
   try {
     const groupId = e.group_id
-    const userIds = getAllUsersWithSchedule(groupId)
+    // 自动同步群成员与课表用户
+    const memberInfo = e.bot.gml.get(e.group_id)
+    const userIds = getAllUsersWithSchedule(groupId, memberInfo)
     
     // 如果没有用户有课表数据
     if (!userIds || userIds.length === 0) {
@@ -95,7 +159,7 @@ export async function getMultipleNextClassRenderData(e, limit = null) {
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           return {
-            userName: (userName || "").length > 16 ? (userName.substring(0, 16) + "...") : userName,
+            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
             avatar: avatarUrl,
             hasClass: false,
             type: "空闲",
@@ -137,7 +201,7 @@ export async function getMultipleNextClassRenderData(e, limit = null) {
             userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
             avatar: avatarUrl,
             hasClass: true,
-            className: (nextClassInfo.courseName || "").length > 10 ? (nextClassInfo.courseName.substring(0, 10) + "...") : nextClassInfo.courseName,
+            className: (nextClassInfo.courseName || "").length > 8 ? (nextClassInfo.courseName.substring(0, 8) + "...") : nextClassInfo.courseName,
             type: nowType,
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,
@@ -253,40 +317,6 @@ function getAllUsersWithScheduleFromFiles() {
     return userIds
   } catch (error) {
     logger.error(`[ClassTable] 获取所有用户列表失败: ${error}`)
-    return []
-  }
-}
-
-/**
- * 获取群组中所有有课表数据的用户ID
- * @param {string} groupId - 群组ID
- * @returns {Array} 用户ID数组
- */
-function getAllUsersWithSchedule(groupId) {
-  try {
-    // 从群组用户列表文件中读取用户ID
-    const groupUserListPath = path.join(GROUP_DATA_DIR, `${groupId}_userlist.json`)
-    
-    if (!fs.existsSync(groupUserListPath)) {
-      logger.info(`[ClassTable] 群组${groupId}的用户列表文件不存在`)
-      return []
-    }
-    
-    const content = fs.readFileSync(groupUserListPath, 'utf8')
-    const userIds = JSON.parse(content)
-    
-    // 过滤出实际存在课表文件的用户
-    const validUserIds = []
-    for (const userId of userIds) {
-      const userFilePath = path.join(USER_DATA_DIR, `${userId}.json`)
-      if (fs.existsSync(userFilePath)) {
-        validUserIds.push(userId)
-      }
-    }
-    
-    return validUserIds
-  } catch (error) {
-    logger.error(`[ClassTable] 获取群组用户列表失败: ${error}`)
     return []
   }
 }
@@ -440,20 +470,10 @@ export async function getAllUsersNextClassRenderData(e, limit = null) {
     
     // 使用Promise.all并行处理用户数据
     const userPromises = userIds.map(async (userId) => {
-      let userName = `用户${userId}`
+      let userName = `id${userId}`
       let avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${userId}&s=100`
       
       const filePath = getSchedulePath(userId)
-      if (!fs.existsSync(filePath)) {
-        return {
-          userName: userName,
-          avatar: avatarUrl,
-          hasClass: false,
-          NoCourseTitle: "未导入课表",
-          NoCourseTip: "该用户尚未导入课表"
-        }
-      }
-      
       try {
         const scheduleData = loadScheduleFromFile(filePath)
         const schedule = scheduleData.schedule || scheduleData // 兼容新旧数据格式
@@ -505,10 +525,10 @@ export async function getAllUsersNextClassRenderData(e, limit = null) {
           }
 
           return {
-            userName: (userName || "").length > 14 ? (userName.substring(0, 14) + "...") : userName,
+            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
             avatar: avatarUrl,
             hasClass: true,
-            className: (nextClassInfo.courseName || "").length > 10 ? (nextClassInfo.courseName.substring(0, 10) + "...") : nextClassInfo.courseName,
+            className: (nextClassInfo.courseName || "").length > 8 ? (nextClassInfo.courseName.substring(0, 8) + "...") : nextClassInfo.courseName,
             type: nowType,
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,

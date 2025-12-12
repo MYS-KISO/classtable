@@ -1,8 +1,4 @@
 /**
- * 时间处理工具函数
- */
-
-/**
  * 解析时间字符串 (HH:MM) 为小时和分钟
  * @param {string} timeStr - 时间字符串
  * @returns {Object} 包含小时和分钟的对象

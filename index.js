@@ -6,9 +6,9 @@ import { getMultipleNextClassRenderData, getAllUsersNextClassRenderData } from "
 import { isInClassTime, findConsecutiveClasses, parseTimeString } from "./utils/timeUtils.js"
 import { userScheduleCache, getUserScheduleCacheKey, getSkipClassCacheKey } from "./utils/cacheUtils.js"
 
-const DATA_DIR = path.join("./plugins", "classtable", "data")
-const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
-const GROUP_DATA_DIR = path.join("./plugins", "classtable", "data", "groups")
+const DATA_DIR = path.join("./plugins", "classtable", "data");
+const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users");
+const GROUP_DATA_DIR = path.join("./plugins", "classtable", "data", "groups");
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -64,12 +64,14 @@ export class classtable extends plugin {
     try {
       const pluginResources = `./plugins/${pluginName}/resources`
       const tplFile = `${pluginResources}/html/${tplName}.html`
+      const _res_path = path.join(process.cwd(), 'plugins', pluginName, 'resources')
       
       const base64 = await puppeteer.screenshot(pluginName, {
         saveId: tplName,
         imgType: 'png',
         tplFile,
         pluginResources,
+        _res_path,
         ...data
       })
       

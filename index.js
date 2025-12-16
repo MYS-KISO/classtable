@@ -637,7 +637,7 @@ export class classtable extends plugin {
             userName = `用户${userId}`
           }
 
-          const message = ` ${userName} 正在上《${nextClassInfo.courseName}》课哦，预计${nextClassInfo.endTime}下课，请耐心等待一下吧~`
+          const message = ` ${userName} 正在上《${nextClassInfo.courseName}》课哦，预计于${nextClassInfo.endTime}下课，请耐心等待一下吧~`
           await e.reply(message, true)
         }
       }

@@ -1,3 +1,21 @@
+﻿import fs from "node:fs"
+import path from "node:path"
+import {
+  parseTimeString,
+  isInClassTime,
+  findConsecutiveClasses,
+  timeToMinutes, calculateTimeInterval
+} from './time.js'
+import {
+  groupQueryCache,
+  getGroupCacheKey,
+  getSkipClassCacheKey
+} from './cache.js'
+
+const DATA_DIR = path.join("./plugins", "classtable", "data")
+const USER_DATA_DIR = path.join(DATA_DIR, "users")
+const GROUP_DATA_DIR = path.join(DATA_DIR, "groups")
+
 /**
  * 自动同步群成员与课表用户，维护群组用户列表
  * @param {string} groupId - 群号
@@ -19,7 +37,7 @@ function syncGroupUserListWithMembers(groupId, memberInfo) {
     if (fs.existsSync(groupUserListPath)) {
       try {
         oldUserIds = JSON.parse(fs.readFileSync(groupUserListPath, 'utf8'))
-      } catch {}
+      } catch (e) {}
     }
     // 只保留当前群成员且有课表的用户
     // 写回文件（去重）
@@ -60,23 +78,6 @@ function getAllUsersWithSchedule(groupId, memberInfo = null) {
     return []
   }
 }
-import fs from "node:fs"
-import path from "node:path"
-import {
-  parseTimeString,
-  isInClassTime,
-  findConsecutiveClasses,
-  getCurrentTimeMinutes, calculateTimeInterval
-} from './time.js'
-import {
-  groupQueryCache,
-  getGroupCacheKey,
-  getSkipClassCacheKey
-} from './cache.js'
-
-const DATA_DIR = path.join("./plugins", "classtable", "data")
-const USER_DATA_DIR = path.join(DATA_DIR, "users")
-const GROUP_DATA_DIR = path.join(DATA_DIR, "groups")
 
 /**
  * 获取群组中多个用户的下一节课信息用于HTML渲染
@@ -251,8 +252,8 @@ export async function getMultipleNextClassRenderData(e, limit = null) {
       // 只有有课的用户才有时间信息
       if (a.hasClass && b.hasClass && a.startTime && b.startTime) {
         // 将时间字符串转换为分钟数进行比较
-        const totalMinutesA = getCurrentTimeMinutes(a.startTime)
-        const totalMinutesB = getCurrentTimeMinutes(b.startTime)
+        const totalMinutesA = timeToMinutes(a.startTime)
+        const totalMinutesB = timeToMinutes(b.startTime)
         
         return totalMinutesA - totalMinutesB
       }
@@ -348,7 +349,8 @@ function loadScheduleFromFile(filePath) {
  */
 function calculateCurrentWeek(startDate, currentDate) {
   const deltaDays = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24))
-  return Math.floor(deltaDays / 7) + 1
+  const week = Math.floor(deltaDays / 7) + 1
+  return week < 1 ? 1 : week
 }
 
 /**
@@ -578,8 +580,8 @@ export async function getAllUsersNextClassRenderData(e, limit = null) {
       // 只有有课的用户才有时间信息
       if (a.hasClass && b.hasClass && a.startTime && b.startTime) {
         // 将时间字符串转换为分钟数进行比较
-        const totalMinutesA = getCurrentTimeMinutes(a.startTime)
-        const totalMinutesB = getCurrentTimeMinutes(b.startTime)
+        const totalMinutesA = timeToMinutes(a.startTime)
+        const totalMinutesB = timeToMinutes(b.startTime)
         
         return totalMinutesA - totalMinutesB
       }

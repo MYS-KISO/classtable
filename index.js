@@ -10,8 +10,7 @@ import {
 import {
   isInClassTime,
   findConsecutiveClasses,
-  parseTimeString,
-  getCurrentTimeMinutes
+  parseTimeString
 } from "./utils/time.js"
 import {
   userScheduleCache,
@@ -638,7 +637,7 @@ export class classtable extends plugin {
             userName = `用户${userId}`
           }
 
-          const message = `⚠️ ${userName} 正在上《${nextClassInfo.courseName}》，预计${nextClassInfo.endTime}下课`
+          const message = ` ${userName} 正在上《${nextClassInfo.courseName}》课哦，预计${nextClassInfo.endTime}下课，请耐心等待一下吧~`
           await e.reply(message, true)
         }
       }

@@ -94,21 +94,10 @@ export function timeToMinutes(timeStr) {
   return hour * 60 + minute
 }
 
-/**
- * 获取当前时间的分钟表示
- * @param {number} currentHour - 当前小时
- * @param {number} currentMinute - 当前分钟
- * @returns {number} 当前时间的总分钟数
- */
-export function getCurrentTimeMinutes(currentHour, currentMinute) {
-  return currentHour * 60 + currentMinute
-}
-
 export default {
   parseTimeString,
   calculateTimeInterval,
   isInClassTime,
   findConsecutiveClasses,
-  timeToMinutes,
-  getCurrentTimeMinutes
+  timeToMinutes
 }

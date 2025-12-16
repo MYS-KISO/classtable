@@ -4,7 +4,8 @@ import {
   parseTimeString,
   isInClassTime,
   findConsecutiveClasses,
-  timeToMinutes, calculateTimeInterval
+  timeToMinutes,
+  calculateTimeInterval
 } from './time.js'
 import {
   groupQueryCache,
@@ -16,13 +17,80 @@ const DATA_DIR = path.join("./plugins", "classtable", "data")
 const USER_DATA_DIR = path.join(DATA_DIR, "users")
 const GROUP_DATA_DIR = path.join(DATA_DIR, "groups")
 
+// 内部函数 Start
+
+/**
+ * 获取课表文件路径
+ * @param {string} userId - 用户ID
+ * @returns {string} 文件路径 
+ */
+function getSchedulePath(userId) {
+  return path.join(USER_DATA_DIR, `${userId}.json`)
+}
+
+/**
+ * 从文件加载课表数据
+ * @param {string} filePath - 文件路径
+ * @returns {Object} 课表数据
+ */
+function loadScheduleFromFile(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8')
+  return JSON.parse(content)
+}
+
+/**
+ * 计算当前周次
+ * @param {Date} startDate - 开学日期
+ * @param {Date} currentDate - 当前日期
+ * @returns {number} 当前周次
+ */
+function calculateCurrentWeek(startDate, currentDate) {
+  const deltaDays = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24))
+  const week = Math.floor(deltaDays / 7) + 1
+  return week < 1 ? 1 : week
+}
+
+/**
+ * 获取所有有课表数据的用户ID
+ * @returns {Array} 用户ID数组
+ */
+function getAllUsersWithScheduleFromFiles() {
+  try {
+    // 直接从用户数据目录中读取所有用户文件
+    const userIds = []
+    
+    // 确保用户数据目录存在
+    if (!fs.existsSync(USER_DATA_DIR)) {
+      logger.info(`[ClassTable] 用户数据目录不存在: ${USER_DATA_DIR}`)
+      return []
+    }
+    
+    // 读取目录中的所有文件
+    const files = fs.readdirSync(USER_DATA_DIR)
+    
+    // 过滤出.json文件并提取用户ID
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const userId = file.replace('.json', '')
+        userIds.push(userId)
+      }
+    }
+    
+    logger.info(`[ClassTable] 从文件中找到${userIds.length}个有课表数据的用户`)
+    return userIds
+  } catch (error) {
+    logger.error(`[ClassTable] 获取所有用户列表失败: ${error}`)
+    return []
+  }
+}
+
 /**
  * 自动同步群成员与课表用户，维护群组用户列表
  * @param {string} groupId - 群号
  * @param {Object} memberInfo - e.bot.gml.get(e.group_id) 返回的成员 Map
  * @returns {Array} 有课表数据的群成员 QQ 号数组
  */
-function syncGroupUserListWithMembers(groupId, memberInfo) {
+async function syncGroupUserListWithMembers(groupId, memberInfo) {
   try {
     // 获取所有群成员 QQ 号
     const memberIds = Array.from(memberInfo.keys()).map(String)
@@ -79,13 +147,17 @@ function getAllUsersWithSchedule(groupId, memberInfo = null) {
   }
 }
 
+// 内部函数 End
+
+// 导出函数 Start
+
 /**
  * 获取群组中多个用户的下一节课信息用于HTML渲染
  * @param {Object} e - 消息事件对象
  * @param {number} limit - 限制显示的用户数量，可选
  * @returns {Object} 包含渲染所需所有数据的对象
  */
-export async function getMultipleNextClassRenderData(e, limit = null) {
+async function getMultipleNextClassRenderData(e, limit = null) {
   try {
     const groupId = e.group_id
     // 自动同步群成员与课表用户
@@ -289,160 +361,12 @@ export async function getMultipleNextClassRenderData(e, limit = null) {
 }
 
 /**
- * 获取所有有课表数据的用户ID
- * @returns {Array} 用户ID数组
- */
-function getAllUsersWithScheduleFromFiles() {
-  try {
-    // 直接从用户数据目录中读取所有用户文件
-    const userIds = []
-    
-    // 确保用户数据目录存在
-    if (!fs.existsSync(USER_DATA_DIR)) {
-      logger.info(`[ClassTable] 用户数据目录不存在: ${USER_DATA_DIR}`)
-      return []
-    }
-    
-    // 读取目录中的所有文件
-    const files = fs.readdirSync(USER_DATA_DIR)
-    
-    // 过滤出.json文件并提取用户ID
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        const userId = file.replace('.json', '')
-        userIds.push(userId)
-      }
-    }
-    
-    logger.info(`[ClassTable] 从文件中找到${userIds.length}个有课表数据的用户`)
-    return userIds
-  } catch (error) {
-    logger.error(`[ClassTable] 获取所有用户列表失败: ${error}`)
-    return []
-  }
-}
-
-/**
- * 获取课表文件路径
- * @param {string} userId - 用户ID
- * @returns {string} 文件路径 
- */
-function getSchedulePath(userId) {
-  return path.join(USER_DATA_DIR, `${userId}.json`)
-}
-
-/**
- * 从文件加载课表数据
- * @param {string} filePath - 文件路径
- * @returns {Object} 课表数据
- */
-function loadScheduleFromFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8')
-  return JSON.parse(content)
-}
-
-/**
- * 计算当前周次
- * @param {Date} startDate - 开学日期
- * @param {Date} currentDate - 当前日期
- * @returns {number} 当前周次
- */
-function calculateCurrentWeek(startDate, currentDate) {
-  const deltaDays = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24))
-  const week = Math.floor(deltaDays / 7) + 1
-  return week < 1 ? 1 : week
-}
-
-/**
- * 查找下一节课
- * @param {Object} schedule - 课表数据
- * @param {number} currentWeek - 当前周次
- * @param {number} currentDay - 当前星期几(1-7)
- * @param {number} currentHour - 当前小时
- * @param {number} currentMinute - 当前分钟
- * @returns {Object|null} 下一节课信息或null
- */
-function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMinute) {
-  // 若不存在当周数据或当日数据，直接判定今天没有课程
-  if (!schedule[currentWeek] || !schedule[currentWeek][currentDay]) {
-    return { status: 'noneToday' }
-  }
-
-  const todayClasses = []
-  for (const [node, classes] of Object.entries(schedule[currentWeek][currentDay])) {
-    for (const cls of classes) {
-      // 检查单双周条件：type: 0=全周, 1=单周, 2=双周
-      const classType = cls.type || 0
-      let isValidWeek = true
-      
-      if (classType === 1 && (currentWeek % 2) === 0) {
-        // 单周(odd)，当前周为偶数，跳过
-        isValidWeek = false
-      } else if (classType === 2 && (currentWeek % 2) === 1) {
-        // 双周(even)，当前周为奇数，跳过
-        isValidWeek = false
-      }
-      
-      if (isValidWeek) {
-        todayClasses.push({
-          ...cls,
-          node: parseInt(node)
-        })
-      }
-    }
-  }
-
-  // 如果今天根本没有课程
-  if (todayClasses.length === 0) {
-    return { status: 'noneToday' }
-  }
-
-  todayClasses.sort((a, b) => a.node - b.node)
-
-  // 优先查找当前正在上的课程
-  for (let i = 0; i < todayClasses.length; i++) {
-    const cls = todayClasses[i]
-    if (isInClassTime(cls.startTime, cls.endTime, currentHour, currentMinute)) {
-      // 找到了当前正在上的课程，检查是否有连续的相同课程
-      const consecutiveResult = findConsecutiveClasses(todayClasses, i)
-      return {
-        ...consecutiveResult.finalClass,
-        startTime: consecutiveResult.startTime,
-        endTime: consecutiveResult.finalEndTime,
-        week: currentWeek,
-        status: 'ongoing'
-      }
-    }
-  }
-
-  // 没有正在上的课程，找下一节（仅限今天）
-  for (let i = 0; i < todayClasses.length; i++) {
-    const cls = todayClasses[i]
-    const { hour: startHour, minute: startMinute } = parseTimeString(cls.startTime)
-    if (startHour > currentHour || (startHour === currentHour && startMinute > currentMinute)) {
-      // 找到了下一节课，检查是否有连续的相同课程
-      const consecutiveResult = findConsecutiveClasses(todayClasses, i)
-      return {
-        ...consecutiveResult.finalClass,
-        startTime: consecutiveResult.startTime,
-        endTime: consecutiveResult.finalEndTime,
-        week: currentWeek,
-        status: 'next'
-      }
-    }
-  }
-
-  // 今天有课程但已经结束
-  return { status: 'noneToday' }
-}
-
-/**
  * 获取所有用户的下一节课信息用于HTML渲染
  * @param {Object} e - 消息事件对象
  * @param {number} limit - 限制显示的用户数量，可选
  * @returns {Object} 包含渲染所需所有数据的对象
  */
-export async function getAllUsersNextClassRenderData(e, limit = null) {
+async function getAllUsersNextClassRenderData(e, limit = null) {
   try {
     // 获取所有有课表数据的用户ID
     const userIds = getAllUsersWithScheduleFromFiles()
@@ -613,8 +537,94 @@ export async function getAllUsersNextClassRenderData(e, limit = null) {
   }
 }
 
-export default {
+
+/**
+ * 查找下一节课
+ * @param {Object} schedule - 课表数据
+ * @param {number} currentWeek - 当前周次
+ * @param {number} currentDay - 当前星期几(1-7)
+ * @param {number} currentHour - 当前小时
+ * @param {number} currentMinute - 当前分钟
+ * @returns {Object|null} 下一节课信息或null
+ */
+function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMinute) {
+  // 若不存在当周数据或当日数据，直接判定今天没有课程
+  if (!schedule[currentWeek] || !schedule[currentWeek][currentDay]) {
+    return { status: 'noneToday' }
+  }
+
+  const todayClasses = []
+  for (const [node, classes] of Object.entries(schedule[currentWeek][currentDay])) {
+    for (const cls of classes) {
+      // 检查单双周条件：type: 0=全周, 1=单周, 2=双周
+      const classType = cls.type || 0
+      let isValidWeek = true
+      
+      if (classType === 1 && (currentWeek % 2) === 0) {
+        // 单周(odd)，当前周为偶数，跳过
+        isValidWeek = false
+      } else if (classType === 2 && (currentWeek % 2) === 1) {
+        // 双周(even)，当前周为奇数，跳过
+        isValidWeek = false
+      }
+      
+      if (isValidWeek) {
+        todayClasses.push({
+          ...cls,
+          node: parseInt(node)
+        })
+      }
+    }
+  }
+
+  // 如果今天根本没有课程
+  if (todayClasses.length === 0) {
+    return { status: 'noneToday' }
+  }
+
+  todayClasses.sort((a, b) => a.node - b.node)
+
+  // 优先查找当前正在上的课程
+  for (let i = 0; i < todayClasses.length; i++) {
+    const cls = todayClasses[i]
+    if (isInClassTime(cls.startTime, cls.endTime, currentHour, currentMinute)) {
+      // 找到了当前正在上的课程，检查是否有连续的相同课程
+      const consecutiveResult = findConsecutiveClasses(todayClasses, i)
+      return {
+        ...consecutiveResult.finalClass,
+        startTime: consecutiveResult.startTime,
+        endTime: consecutiveResult.finalEndTime,
+        week: currentWeek,
+        status: 'ongoing'
+      }
+    }
+  }
+
+  // 没有正在上的课程，找下一节（仅限今天）
+  for (let i = 0; i < todayClasses.length; i++) {
+    const cls = todayClasses[i]
+    const { hour: startHour, minute: startMinute } = parseTimeString(cls.startTime)
+    if (startHour > currentHour || (startHour === currentHour && startMinute > currentMinute)) {
+      // 找到了下一节课，检查是否有连续的相同课程
+      const consecutiveResult = findConsecutiveClasses(todayClasses, i)
+      return {
+        ...consecutiveResult.finalClass,
+        startTime: consecutiveResult.startTime,
+        endTime: consecutiveResult.finalEndTime,
+        week: currentWeek,
+        status: 'next'
+      }
+    }
+  }
+
+  // 今天有课程但已经结束
+  return { status: 'noneToday' }
+}
+
+// 导出函数 End
+
+export {
   getMultipleNextClassRenderData,
   getAllUsersNextClassRenderData,
-  getAllUsersWithScheduleFromFiles
+  findNextClass
 }

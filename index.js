@@ -648,4 +648,4 @@ export class classtable extends plugin {
   }
 }
 
-logger.mark(`[ClassTable] 插件加载完成`)
+logger.mark(`[ClassTable] 课表插件加载完成`)

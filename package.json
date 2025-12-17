@@ -1,7 +1,7 @@
 {
   "name": "classtable-plugin",
-  "version": "1.0.0",
-  "description": "Miao-Yunzai课程表插件",
+  "version": "1.1.0",
+  "description": "Yunzai-Bot课程表插件",
   "main": "index.js",
   "type": "module",
   "scripts": {

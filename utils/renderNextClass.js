@@ -545,7 +545,7 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
  * @param {number} currentDay - 当前星期几(1-7)
  * @param {number} currentHour - 当前小时
  * @param {number} currentMinute - 当前分钟
- * @returns {Object|null} 下一节课信息或null
+ * @returns {Object|null} 下一节课信息或 { status: 'noneToday' }
  */
 function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMinute) {
   // 若不存在当周数据或当日数据，直接判定今天没有课程
@@ -600,7 +600,7 @@ function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMi
     }
   }
 
-  // 没有正在上的课程，找下一节（仅限今天）
+  // 没有正在上的课程，找下一节
   for (let i = 0; i < todayClasses.length; i++) {
     const cls = todayClasses[i]
     const { hour: startHour, minute: startMinute } = parseTimeString(cls.startTime)

@@ -22,10 +22,6 @@ const DATA_DIR = path.join("./plugins", "classtable", "data");
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users");
 const GROUP_DATA_DIR = path.join("./plugins", "classtable", "data", "groups");
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true })
-}
-
 export class classtable extends plugin {
   constructor() {
     super({
@@ -55,7 +51,7 @@ export class classtable extends plugin {
           fnc: 'showAllNextClass'
         },
         {
-          reg: '^什么(水|专业|普通|神人|sb)课(，)?翘了(！)?$',
+          reg: '^什么(水|专业|普通|神人|sb|b)课(，)?翘了(！)?$',
           fnc: 'skipClass'
         },
         {
@@ -105,16 +101,14 @@ export class classtable extends plugin {
   }
 
   async showMenu(e) {
-    const msg = `本功能通过wakeup课程表APP的API抓包导入\n` +
+    const msg = `课表插件使用帮助\n` +
       `使用方法：\n` +
       `1. 打开wakeup课程表APP，点击右上角按钮\n` +
       `2. 复制分享口令，全部内容直接发送在群里\n` +
-      `3. Bot会自动识别并导入课程表\n` +
-      `4. 导入成功后，Bot会自动撤回分享口令\n` +
+      `3. 导入成功后，Bot会自动撤回分享口令\n` +
       `查看群友目前在不在上课：\n` +
-      `- 【所有群友在上什么课】- 显示群内所有用户的上课情况\n` +
-      `- 【群友在上什么课】- 只显示目前状态中前10的用户\n` +
-      `- 【所有人在上什么课】- 显示插件中保存的所有人的上课情况\n` +
+      `- 【所有群友在上什么课】- 显示群内所有人的上课情况\n` +
+      `- 【群友在上什么课】- 只显示目前状态中前10的人\n` +
       `翘课：发送【什么水课，翘了！】\n` +
       `取消翘课：发送【哎不翘了还是】`
     await e.reply(msg)
@@ -142,19 +136,13 @@ export class classtable extends plugin {
       // 保存用户课表数据到 users/${user_id}.json
       const userFilePath = path.join(USER_DATA_DIR, `${userId}.json`)
       fs.writeFileSync(userFilePath, JSON.stringify(courseSchedule, null, 2), 'utf8')
+      if (groupId) this.addUserToGroupList(groupId, userId)
 
-      // 如果是群组消息，将用户添加到群组用户列表
-      if (groupId) {
-        this.addUserToGroupList(groupId, userId)
-      }
-
-      // 隐藏分享码中间部分
-      // const maskedShareCode = shareCode.substring(0, 2) + '*'.repeat(shareCode.length - 4) + shareCode.substring(shareCode.length - 2)
       await e.reply(`QwQ导入课程表成功，如果重复导入将会覆盖之前的数据\nBot正在尝试撤回你的口令，如果撤回失败请手动撤回哦~`)
 
     } catch (err) {
       logger.error(`[ClassTable] 导入课程表失败: ${err}`)
-      await e.reply(`课程表功能处理失败，可能是WakeUp课程表APP的服务器问题，请联系开发者处理\n\n错误信息: ${err.message}`)
+      await e.reply(`课程表功能处理失败，可能是WakeUp课程表APP的服务器问题，请联系皮梦处理\n\n错误信息: ${err.message}`)
     }
   }
 
@@ -166,8 +154,6 @@ export class classtable extends plugin {
   addUserToGroupList(groupId, userId) {
     const groupUserListPath = path.join(GROUP_DATA_DIR, `${groupId}_userlist.json`)
     let userList = []
-
-    // 如果文件存在，读取现有用户列表
     if (fs.existsSync(groupUserListPath)) {
       try {
         const content = fs.readFileSync(groupUserListPath, 'utf8')
@@ -177,8 +163,6 @@ export class classtable extends plugin {
         userList = []
       }
     }
-
-    // 如果用户不在列表中，添加用户
     if (!userList.includes(userId)) {
       userList.push(userId)
       try {
@@ -190,6 +174,11 @@ export class classtable extends plugin {
     }
   }
 
+  /**
+   * 从WakeUp课程表API获取课程表数据
+   * @param {*} shareCode 
+   * @returns {Object} json数据
+   */
   async getCourseScheduleFromApi(shareCode) {
     const url = `https://i.wakeup.fun/share_schedule/get?key=${shareCode}`
     const headers = {
@@ -293,11 +282,9 @@ export class classtable extends plugin {
 
     // 按周次、星期和节次整理课程表
     const weeklySchedule = {}
-
     for (let week = 1; week <= maxWeek; week++) {
       weeklySchedule[week] = {}
     }
-
     for (const entry of courseSchedule) {
       for (let week = entry.startWeek; week <= entry.endWeek; week++) {
         if (week > maxWeek) continue
@@ -371,7 +358,7 @@ export class classtable extends plugin {
 
   async showAllNextClass(e) {
     if (!e.isMaster) {
-      return e.reply("你暂时无权限看哦（")
+      return await e.reply("你暂时无权限看哦（")
     }
     try {
       const renderData = await getAllUsersNextClassRenderData(e)
@@ -493,8 +480,7 @@ export class classtable extends plugin {
       }
 
       if (!currentClass) {
-        await e.reply("没课翘不了（")
-        return
+        return await e.reply("没课翘不了（")
       }
 
       // 计算课程结束时间
@@ -502,14 +488,11 @@ export class classtable extends plugin {
       const endTime = new Date()
       endTime.setHours(endHour, endMinute, 0, 0)
 
-      // 如果结束时间已经过了，设置为明天同一时间
+      // 如果结束时间已过，不执行
       if (endTime <= currentTime) {
-        endTime.setDate(endTime.getDate() + 1)
-      }
-
-      // 计算过期时间（秒）
+        return
+      }      
       const expireTime = Math.floor((endTime - currentTime) / 1000)
-      // 在Redis中设置翘课标记
       const skipKey = getSkipClassCacheKey(userId)
 
       const hasSkip = await redis.get(skipKey)
@@ -534,20 +517,13 @@ export class classtable extends plugin {
     try {
       const userId = e.user_id
       const skipKey = getSkipClassCacheKey(userId)
-
-      // 检查是否存在翘课标记
       const skipStatus = await redis.get(skipKey)
-
       if (!skipStatus) {
         await e.reply("你还没发起翘课哦")
         return
       }
-
-      // 删除翘课标记
       await redis.del(skipKey)
-
       await e.reply("已为你取消翘课状态~")
-
     } catch (error) {
       logger.error(`[ClassTable] 取消翘课功能失败: ${error}`)
       await e.reply("取消翘课失败，请稍后再试")
@@ -556,43 +532,33 @@ export class classtable extends plugin {
 
   /**
    * 检查@用户是否正在上课
-   * @param {Object} e - 消息事件对象
+   * @param {Object} e
    */
   async checkAtUserClassStatus(e) {
-    // 只处理群组消息中的@消息
-    if (!e.isGroup) {
-      return false
-    }
-
-    // 检查消息中是否包含@内容
+    if (!e.isGroup) return false
     const atMessages = e.message.filter(m => m.type === 'at')
     if (atMessages.length === 0) {
       return false
     }
-
-    // 遍历所有被@的用户
     for (const atMsg of atMessages) {
       const atUserId = atMsg.qq
       await this.checkUserInClassAndReply(e, atUserId)
     }
-
     return false
   }
 
   /**
    * 检查用户是否正在上课并回复
-   * @param {Object} e - 消息事件对象
+   * @param {Object} e
    * @param {string} userId - 被检查的用户ID
    */
   async checkUserInClassAndReply(e, userId) {
     try {
-      // 检查用户是否有课表数据
       const filePath = path.join(USER_DATA_DIR, `${userId}.json`)
       if (!fs.existsSync(filePath)) {
-        return // 用户没有课表数据，不处理
+        return
       }
 
-      // 获取当前时间
       const currentTime = new Date()
       const currentDay = currentTime.getDay() === 0 ? 7 : currentTime.getDay()
       const currentHour = currentTime.getHours()
@@ -601,25 +567,24 @@ export class classtable extends plugin {
       // 使用缓存获取用户课表数据
       const cacheKey = getUserScheduleCacheKey(userId)
       let scheduleData = userScheduleCache.get(cacheKey)
-
       if (!scheduleData) {
-        // 缓存中没有，从文件读取
         scheduleData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
         userScheduleCache.set(cacheKey, scheduleData)
       }
-
       const schedule = scheduleData.schedule || scheduleData
-
-      // 获取该用户的开学日期，如果没有则使用默认值
       const userStartDate = scheduleData.startDate || "2025-09-01"
       const currentWeek = Math.floor((currentTime - new Date(userStartDate)) / (1000 * 60 * 60 * 24 * 7)) + 1
 
       // 查找当前正在上的课程
       const nextClassInfo = findNextClass(schedule, currentWeek, currentDay, currentHour, currentMinute)
 
-      // 如果用户正在上课
+      // 检查是否已经提醒过了
+      const remindKey = `classtable:isreminded:${userId}`
+      if (await redis.get(remindKey)) {
+        return // 已经提醒过，跳过
+      }
+
       if (nextClassInfo && nextClassInfo.status === 'ongoing') {
-        // 检查用户是否翘课
         const skipKey = getSkipClassCacheKey(userId)
         let isSkippingClass = false
         try {
@@ -627,10 +592,7 @@ export class classtable extends plugin {
         } catch (error) {
           logger.error(`[ClassTable] 检查翘课状态失败: ${error}`)
         }
-
-        // 如果用户没有翘课，发送提醒
         if (!isSkippingClass) {
-          // 获取用户昵称
           let userName = `用户${userId}`
           try {
             const memberInfo = e.bot.gml.get(e.group_id)
@@ -642,6 +604,12 @@ export class classtable extends plugin {
 
           const message = ` ${userName} 正在上《${nextClassInfo.courseName}》课哦，预计于${nextClassInfo.endTime}下课，请耐心等待一下吧~`
           await e.reply(message, true)
+          
+          // 计算当前时间和下课时间差
+          const timeLeft = nextClassInfo.endTime - currentTime
+
+          // cd
+          await redis.set(remindKey, '1', { EX: timeLeft / 1000 })
         }
       }
     } catch (error) {

@@ -370,7 +370,9 @@ export class classtable extends plugin {
   }
 
   async showAllNextClass(e) {
-    if (!e.isMaster) return e.reply("你暂时无权限看哦（")
+    if (!e.isMaster) {
+      return e.reply("你暂时无权限看哦（")
+    }
     try {
       const renderData = await getAllUsersNextClassRenderData(e)
       await this.renderImg('classtable', 'next_class', renderData, e)

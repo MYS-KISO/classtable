@@ -605,11 +605,23 @@ export class classtable extends plugin {
           const message = ` ${userName} 正在上《${nextClassInfo.courseName}》课哦，预计于${nextClassInfo.endTime}下课，请耐心等待一下吧~`
           await e.reply(message, true)
           
-          // 计算当前时间和下课时间差
-          const timeLeft = nextClassInfo.endTime - currentTime
+          // 计算当前时间和下课时间差（确保使用整数秒）
+          try {
+            const { hour: endHour, minute: endMinute } = parseTimeString(nextClassInfo.endTime)
+            const endDate = new Date(currentTime)
+            endDate.setHours(endHour, endMinute, 0, 0)
 
-          // cd
-          await redis.set(remindKey, '1', { EX: timeLeft / 1000 })
+            const timeLeftMs = endDate - currentTime
+            if (Number.isFinite(timeLeftMs) && timeLeftMs > 0) {
+              const ttlSeconds = Math.max(1, Math.ceil(timeLeftMs / 1000))
+              // cd（确保传给 redis 的是整数秒）
+              await redis.set(remindKey, '1', { EX: ttlSeconds })
+            } else {
+              logger.warn(`[ClassTable] 下课时间无效或已过: endTime=${nextClassInfo.endTime}`)
+            }
+          } catch (err) {
+            logger.error(`[ClassTable] 计算下课剩余时间失败: ${err}`)
+          }
         }
       }
     } catch (error) {

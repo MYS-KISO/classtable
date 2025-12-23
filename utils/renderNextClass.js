@@ -20,7 +20,7 @@ const GROUP_DATA_DIR = path.join(DATA_DIR, "groups")
 // 内部函数 Start
 
 /**
- * 获取课表文件路径
+* 获取课表文件路径
  * @param {string} userId - 用户ID
  * @returns {string} 文件路径 
  */
@@ -107,8 +107,7 @@ async function syncGroupUserListWithMembers(groupId, memberInfo) {
         oldUserIds = JSON.parse(fs.readFileSync(groupUserListPath, 'utf8'))
       } catch (e) {}
     }
-    // 只保留当前群成员且有课表的用户
-    // 写回文件（去重）
+    // 只保留当前群成员且有课表的用户并写回文件（去重）
     fs.writeFileSync(groupUserListPath, JSON.stringify(validUserIds, null, 2), 'utf8')
     return validUserIds
   } catch (error) {
@@ -118,11 +117,11 @@ async function syncGroupUserListWithMembers(groupId, memberInfo) {
 }
 
 // 兼容原有接口，自动同步群成员与课表用户
-function getAllUsersWithSchedule(groupId, memberInfo = null) {
+async function getAllUsersWithSchedule(groupId, memberInfo = null) {
   try {
     // 如果传入了memberInfo，则自动同步
     if (memberInfo) {
-      return syncGroupUserListWithMembers(groupId, memberInfo)
+      return await syncGroupUserListWithMembers(groupId, memberInfo)
     }
     // 否则走原有逻辑
     const groupUserListPath = path.join(GROUP_DATA_DIR, `${groupId}_userlist.json`)
@@ -149,6 +148,7 @@ function getAllUsersWithSchedule(groupId, memberInfo = null) {
 
 // 内部函数 End
 
+
 // 导出函数 Start
 
 /**
@@ -162,7 +162,7 @@ async function getMultipleNextClassRenderData(e, limit = null) {
     const groupId = e.group_id
     // 自动同步群成员与课表用户
     const memberInfo = e.bot.gml.get(e.group_id)
-    const userIds = getAllUsersWithSchedule(groupId, memberInfo)
+    const userIds = await getAllUsersWithSchedule(groupId, memberInfo)
     
     // 如果没有用户有课表数据
     if (!userIds || userIds.length === 0) {
@@ -323,15 +323,24 @@ async function getMultipleNextClassRenderData(e, limit = null) {
       // 如果状态相同，按上课时间排序
       // 只有有课的用户才有时间信息
       if (a.hasClass && b.hasClass && a.startTime && b.startTime) {
-        // 将时间字符串转换为分钟数进行比较
-        const totalMinutesA = timeToMinutes(a.startTime)
-        const totalMinutesB = timeToMinutes(b.startTime)
-        
-        return totalMinutesA - totalMinutesB
+        try {
+          // 将时间字符串转换为分钟数进行比较
+          const totalMinutesA = timeToMinutes(a.startTime)
+          const totalMinutesB = timeToMinutes(b.startTime)
+          
+          if (totalMinutesA !== totalMinutesB) {
+            return totalMinutesA - totalMinutesB
+          }
+        } catch (error) {
+          logger.warn(`[ClassTable] 时间格式解析失败: A=${a.startTime}, B=${b.startTime}`)
+          // 如果时间解析失败，继续按用户名排序
+        }
       }
       
-      // 如果状态相同但无法按时间排序，保持原顺序
-      return 0
+      // 如果状态相同且无法按时间排序，按用户名排序确保稳定性
+      const nameA = a.userName || ''
+      const nameB = b.userName || ''
+      return nameA.localeCompare(nameB)
     })
     
     // 缓存结果5分钟

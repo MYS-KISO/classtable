@@ -505,7 +505,7 @@ export class classtable extends plugin {
 
       const classType = isNextClass ? "下一节课" : "当前课程"
       await e.reply(`已标记翘课${classType}《${currentClass.courseName}》！翘课状态将持续到${currentClass.endTime}qwq`)
-      // await e.reply(`兄弟好翘`)
+      // await e.reply(`Ciallo～(∠・ω＜ )⌒☆`)
 
     } catch (error) {
       logger.error(`[ClassTable] 翘课功能失败: ${error}`)

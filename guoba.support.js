@@ -21,3 +21,5 @@ export function supportGuoba() {
             // 图标颜色，例：#FF0000 或 rgb(255, 0, 0)
             iconColor: '#000'
         },
+    }
+}

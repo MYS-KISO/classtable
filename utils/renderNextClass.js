@@ -237,8 +237,8 @@ async function getMultipleNextClassRenderData(e, limit = null) {
             hasClass: false,
             type: "空闲",
             typeColor: "#50ff05ff",
-            NoCourseTitle: "今日无课",
-            NoCourseTip: "好好休息一下吧"
+            NoCourseTitle: "好诶，今天没课！",
+            NoCourseTip: "享受一下假期吧w~"
           }
         } else {
           let nowType = "将开始"
@@ -426,8 +426,8 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
             hasClass: false,
             type: "空闲",
             typeColor: "#50ff05ff",
-            NoCourseTitle: "好耶！没课喵",
-            NoCourseTip: "休息吧喵"
+            NoCourseTitle: "好耶，没课啦！",
+            NoCourseTip: "好好休息一下吧w~"
           }
         } else {
           let nowType = "将开始"

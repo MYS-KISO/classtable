@@ -31,7 +31,7 @@ export class classtable extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^课表插件帮助$',
+          reg: '^(课表插件帮助|#clshelp)$',
           fnc: 'showMenu'
         },
         {
@@ -39,11 +39,11 @@ export class classtable extends plugin {
           fnc: 'importSchedule'
         },
         {
-          reg: '^所有群友在上什么课$',
+          reg: '^(所有群友在上什么课|#clstba)$',
           fnc: 'showAllGroupNextClass'
         },
         {
-          reg: '^群友在上什么课$',
+          reg: '^(群友在上什么课|#clstb)$',
           fnc: 'showGroupNextClass'
         },
         {
@@ -51,11 +51,11 @@ export class classtable extends plugin {
           fnc: 'showAllNextClass'
         },
         {
-          reg: '^什么(水|专业|普通|神人|sb|b)课(，)?翘了(！)?$',
+          reg: '^(什么(水|专业|普通|神人|sb|b)课(，)?翘了(！)?|#clsskip)$',
           fnc: 'skipClass'
         },
         {
-          reg: '^哎不翘了(还是)?$',
+          reg: '^(哎不翘了(还是)?|#clsunskip)$',
           fnc: 'cancelSkipClass'
         },
         {
@@ -107,10 +107,10 @@ export class classtable extends plugin {
       `2. 复制分享口令，全部内容直接发送在群里\n` +
       `3. 导入成功后，Bot会自动撤回分享口令\n` +
       `查看群友目前在不在上课：\n` +
-      `- 【所有群友在上什么课】- 显示群内所有人的上课情况\n` +
-      `- 【群友在上什么课】- 只显示目前状态中前10的人\n` +
-      `翘课：发送【什么??课，翘了！】问号内容可以自行发挥\n` +
-      `取消翘课：发送【哎不翘了还是】`
+      `- 【所有群友在上什么课|#clstba】- 显示群内所有人的上课情况\n` +
+      `- 【群友在上什么课|#clstb】- 只显示目前状态中前10的人\n` +
+      `翘课：发送【什么??课，翘了！|#skip】问号内容可以自行发挥\n` +
+      `取消翘课：发送【哎不翘了还是|#unskip】`
     await e.reply(msg)
   }
 
@@ -358,7 +358,7 @@ export class classtable extends plugin {
 
   async showAllNextClass(e) {
     if (!e.isMaster) {
-      return await e.reply("你暂时无权限看哦（")
+      return await e.reply("你暂时无权限看哦w")
     }
     try {
       const renderData = await getAllUsersNextClassRenderData(e)

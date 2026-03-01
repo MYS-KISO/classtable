@@ -237,8 +237,8 @@ async function getMultipleNextClassRenderData(e, limit = null) {
             hasClass: false,
             type: "空闲",
             typeColor: "#50ff05ff",
-            NoCourseTitle: "好诶，今天没课！",
-            NoCourseTip: "享受一下假期吧w~"
+            NoCourseTitle: "好诶，没课啦！",
+            NoCourseTip: "好好休息一下吧w~"
           }
         } else {
           let nowType = "将开始"

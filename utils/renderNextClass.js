@@ -232,7 +232,7 @@ async function getMultipleNextClassRenderData(e, limit = null) {
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           return {
-            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
+            userName: userName,
             avatar: avatarUrl,
             hasClass: false,
             type: "空闲",

@@ -271,10 +271,10 @@ async function getMultipleNextClassRenderData(e, limit = null) {
           }
 
           return {
-            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
+            userName: userName,
             avatar: avatarUrl,
             hasClass: true,
-            className: (nextClassInfo.courseName || "").length > 8 ? (nextClassInfo.courseName.substring(0, 8) + "...") : nextClassInfo.courseName,
+            className: nextClassInfo.courseName,
             type: nowType,
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,
@@ -421,7 +421,7 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           return {
-            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
+            userName: userName,
             avatar: avatarUrl,
             hasClass: false,
             type: "空闲",
@@ -460,10 +460,10 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
           }
 
           return {
-            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
+            userName: userName,
             avatar: avatarUrl,
             hasClass: true,
-            className: (nextClassInfo.courseName || "").length > 8 ? (nextClassInfo.courseName.substring(0, 8) + "...") : nextClassInfo.courseName,
+            className: nextClassInfo.courseName,
             type: nowType,
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,

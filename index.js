@@ -109,8 +109,8 @@ export class classtable extends plugin {
       `查看群友目前在不在上课：\n` +
       `- 【所有群友在上什么课|#clstba】- 显示群内所有人的上课情况\n` +
       `- 【群友在上什么课|#clstb】- 只显示目前状态中前10的人\n` +
-      `翘课：发送【什么??课，翘了！|#skip】问号内容可以自行发挥\n` +
-      `取消翘课：发送【哎不翘了还是|#unskip】`
+      `翘课：发送【什么??课，翘了！|#clsskip】问号内容可以自行发挥\n` +
+      `取消翘课：发送【哎不翘了还是|#clsunskip】`
     await e.reply(msg)
   }
 

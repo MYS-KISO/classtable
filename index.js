@@ -400,7 +400,7 @@ export class classtable extends plugin {
       const userStartDate = scheduleData.startDate || "2025-09-01"
       const currentWeek = Math.floor((currentTime - new Date(userStartDate)) / (1000 * 60 * 60 * 24 * 7)) + 1
 
-      // 查找当前课程或下一节课（最近1小时内有课程）
+      // 查找当前课程或下一节课（最近6小时内有课程）
       let currentClass = null
       let isNextClass = false
 
@@ -435,9 +435,9 @@ export class classtable extends plugin {
         }
       }
 
-      // 如果没有当前课程，查找最近1小时内的下一节课
+      // 如果没有当前课程，查找最近6小时内的下一节课
       if (!currentClass) {
-        const oneHourLater = new Date(currentTime.getTime() + 60 * 60 * 1000)
+        const oneHourLater = new Date(currentTime.getTime() + 6 * 60 * 60 * 1000)
 
         if (schedule[currentWeek] && schedule[currentWeek][currentDay]) {
           const todayClasses = []
@@ -456,14 +456,14 @@ export class classtable extends plugin {
 
           todayClasses.sort((a, b) => a.node - b.node)
 
-          // 查找最近1小时内的课程
+          // 查找最近6小时内的课程
           for (let i = 0; i < todayClasses.length; i++) {
             const cls = todayClasses[i]
             const { hour: startHour, minute: startMinute } = parseTimeString(cls.startTime)
             const classTime = new Date(currentTime)
             classTime.setHours(startHour, startMinute, 0, 0)
 
-            // 如果课程开始时间在当前时间和1小时后之间
+            // 如果课程开始时间在当前时间和6小时后之间
             if (classTime > currentTime && classTime <= oneHourLater) {
               // 找到了下一节课，检查是否有连续的相同课程
               const consecutiveResult = findConsecutiveClasses(todayClasses, i)

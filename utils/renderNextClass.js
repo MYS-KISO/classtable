@@ -470,7 +470,7 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
             startTime: nextClassInfo.startTime,
             endTime: nextClassInfo.endTime,
             timeUntilEnd: timeUntilEnd
-            
+            classroom: nextClassInfo.room
           }
         }
       } catch (error) {

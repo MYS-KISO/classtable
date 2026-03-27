@@ -470,7 +470,7 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
             startTime: nextClassInfo.startTime,
             endTime: nextClassInfo.endTime,
             timeUntilEnd: timeUntilEnd
-            classroom: nextClassInfo.room
+            
           }
         }
       } catch (error) {
@@ -607,6 +607,7 @@ function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMi
         endTime: consecutiveResult.finalEndTime,
         week: currentWeek,
         status: 'ongoing'
+        room: cls.room
       }
     }
   }

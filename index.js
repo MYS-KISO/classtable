@@ -240,7 +240,7 @@ export class classtable extends plugin {
 
     // 获取开学日期和最大周数
     const maxWeek = settings.maxWeek || 18
-    const startDate = settings.startDate || "2025-09-01" // 从设置中获取开学日期，如果没有则使用默认值
+    const startDate = settings.startDate || "2026-03-04" // 从设置中获取开学日期，如果没有则使用默认值
 
     // 生成完整的课程表数据
     const courseSchedule = []
@@ -254,14 +254,24 @@ export class classtable extends plugin {
 
       // 获取上课的时间段
       const classTimes = []
-      for (let i = 0; i < step; i++) {
-        const node = startNode + i
-        const timeInfo = nodeTimeDict[node] || { startTime: "未知", endTime: "未知" }
+      // 如果课程使用自定义时间(ownTime为true)，直接使用API提供的时间
+      if (scheduleItem.ownTime && scheduleItem.startTime && scheduleItem.endTime) {
         classTimes.push({
-          node,
-          startTime: timeInfo.startTime,
-          endTime: timeInfo.endTime
+          node: startNode,
+          startTime: scheduleItem.startTime,
+          endTime: scheduleItem.endTime
         })
+      } else {
+        // 从timeTable根据node查找时间
+        for (let i = 0; i < step; i++) {
+          const node = startNode + i
+          const timeInfo = nodeTimeDict[node] || { startTime: "未知", endTime: "未知" }
+          classTimes.push({
+            node,
+            startTime: timeInfo.startTime,
+            endTime: timeInfo.endTime
+          })
+        }
       }
 
       // 将课程信息整合

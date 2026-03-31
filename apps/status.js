@@ -18,7 +18,7 @@ export class classtableStatus extends plugin {
           fnc: 'showAllGroupNextClass'
         },
         {
-          reg: '^(群友在上什么课|#?clstb)$',
+          reg: '^(群友在上什么课|#clstb)$',
           fnc: 'showGroupNextClass'
         },
         {

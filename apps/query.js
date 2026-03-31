@@ -14,7 +14,7 @@ export class classtableQuery extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^((今日|明日|后日|昨日)课表|(查课表\s+)?\d{4}-\d{2}-\d{2}课表?)$',
+          reg: '^(#?(今日|明日|后日|昨日)课表|(查课表\s+)?\d{4}\d{2}\d{2}课表?)$',
           fnc: 'queryDateSchedule'
         }
       ]
@@ -50,7 +50,7 @@ export class classtableQuery extends plugin {
         dateStr = relative
       } else {
         // 匹配 YYYY-MM-DD 格式
-        const dateMatch = msg.match(/(\d{4})-(\d{2})-(\d{2})/)
+        const dateMatch = msg.match(/(\d{4})(\d{2})(\d{2})/)
         if (dateMatch) {
           const [, year, month, day] = dateMatch
           targetDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))

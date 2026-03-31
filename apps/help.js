@@ -27,7 +27,7 @@ export class classtableHelp extends plugin {
       `- 【群友在上什么课|#clstb】- 只显示目前状态中前10的人\n` +
       `查询指定日期课表：\n` +
       `- 【今日课表/明日课表/后日课表/昨日课表】- 查询相对日期课表\n` +
-      `- 【YYYY-MM-DD课表】- 查询指定日期课表（如：2025-04-01课表）\n` +
+      `- 【YYYY-MM-DD课表】- 查询指定日期课表（如：20250401课表）\n` +
       `翘课：发送【什么水课，翘了！|#clsskip】、\n` +
       `取消翘课：发送【哎不翘了(还是)|#clsunskip】`
     await e.reply(msg)

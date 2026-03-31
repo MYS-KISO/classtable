@@ -137,7 +137,7 @@ export class classtableQuery extends plugin {
         const nodeStr = cls.node === cls.nodeEnd ? `第${cls.node}节` : `第${cls.node}-${cls.nodeEnd}节`
         const msg = `📚 ${cls.courseName}\n` +
                    `⏰ ${cls.startTime} - ${cls.endTime}（${nodeStr}）\n` +
-                  //  `👤 ${cls.teacher || '未知教师'}\n` +
+                   `👤 ${cls.teacher || '未知教师'}\n` +
                    `📍 ${cls.room || '未知教室'}`
         forwardMsgs.push(msg)
       }

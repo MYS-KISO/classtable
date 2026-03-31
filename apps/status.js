@@ -14,7 +14,7 @@ export class classtableStatus extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^所有群友在上什么课$',
+          reg: '^^(所有群友在上什么课|#clstba)$',
           fnc: 'showAllGroupNextClass'
         },
         {

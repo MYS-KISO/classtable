@@ -19,7 +19,7 @@ export class classtableSkip extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^(什么(水|专业|普通|神人|sb|b)课(，)?翘了(！)?|#?clsskip)$',
+          reg: '^(什么水课(，)?翘了(！)?|#?clsskip)$',
           fnc: 'skipClass'
         },
         {
@@ -96,9 +96,9 @@ export class classtableSkip extends plugin {
         }
       }
 
-      // 如果没有当前课程，查找最近1小时内的下一节课
+      // 如果没有当前课程，查找最近6小时内的下一节课
       if (!currentClass) {
-        const oneHourLater = new Date(currentTime.getTime() + 60 * 60 * 1000)
+        const oneHourLater = new Date(currentTime.getTime() + 6 * 60 * 60 * 1000)
 
         if (schedule[currentWeek] && schedule[currentWeek][currentDay]) {
           const todayClasses = []
@@ -124,7 +124,7 @@ export class classtableSkip extends plugin {
             const classTime = new Date(currentTime)
             classTime.setHours(startHour, startMinute, 0, 0)
 
-            // 如果课程开始时间在当前时间和1小时后之间
+            // 如果课程开始时间在当前时间和6小时后之间
             if (classTime > currentTime && classTime <= oneHourLater) {
               // 找到了下一节课，检查是否有连续的相同课程
               const consecutiveResult = findConsecutiveClasses(todayClasses, i)
@@ -141,7 +141,7 @@ export class classtableSkip extends plugin {
       }
 
       if (!currentClass) {
-        return await e.reply("没课翘不了（")
+        return await e.reply("没课翘不了咕qwq")
       }
 
       // 计算课程结束时间
@@ -158,7 +158,7 @@ export class classtableSkip extends plugin {
 
       const hasSkip = await redis.get(skipKey)
       if (hasSkip) {
-        await e.reply("你已经翘过了")
+        await e.reply("你已经翘过了呐")
         return
       }
 
@@ -169,7 +169,7 @@ export class classtableSkip extends plugin {
 
     } catch (error) {
       logger.error(`[ClassTable] 翘课功能失败: ${error}`)
-      await e.reply("翘课失败，请稍后再试")
+      await e.reply("翘课失败，请稍后再试qwq")
     }
   }
 

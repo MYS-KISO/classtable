@@ -23,7 +23,7 @@ export class classtableSkip extends plugin {
           fnc: 'skipClass'
         },
         {
-          reg: '^(哎不翘了(还是)?|#?clscancel)$',
+          reg: '^(哎不翘了(还是)?|#?clsunskip)$',
           fnc: 'cancelSkipClass'
         }
       ]

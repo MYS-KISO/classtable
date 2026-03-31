@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import plugin from "../../../lib/plugins/plugin.js"
+import calculateTimeInterval from "../utils/time.js"
 
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
 

@@ -279,7 +279,8 @@ async function getMultipleNextClassRenderData(e, limit = null) {
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,
             endTime: nextClassInfo.endTime,
-            timeUntilEnd: timeUntilEnd
+            timeUntilEnd: timeUntilEnd,
+            room: nextClassInfo.room
           }
         }
       } catch (error) {
@@ -468,7 +469,8 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,
             endTime: nextClassInfo.endTime,
-            timeUntilEnd: timeUntilEnd
+            timeUntilEnd: timeUntilEnd,
+            room: nextClassInfo.room
           }
         }
       } catch (error) {
@@ -604,6 +606,7 @@ function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMi
         startTime: consecutiveResult.startTime,
         endTime: consecutiveResult.finalEndTime,
         week: currentWeek,
+        room: cls.room || '暂无教室信息',
         status: 'ongoing'
       }
     }

@@ -29,7 +29,7 @@ export class classtableHelp extends plugin {
       `- 【今天课表/明天课表/后天课表/昨天课表】- 查询相对日期课表\n` +
       `- 【YYYY-MM-DD课表】- 查询指定日期课表（如：2025-04-01课表）\n` +
       `翘课：发送【什么水课，翘了！|#clsskip】、\n` +
-      `取消翘课：发送【哎不翘了(还是)|#clsunskip】
+      `取消翘课：发送【哎不翘了(还是)|#clsunskip】`
     await e.reply(msg)
   }
 }

@@ -136,7 +136,8 @@ export class classtableQuery extends plugin {
 
       // 发送合并转发
       const common = await import("../../../lib/common/common.js")
-      const forwardMsg = await common.makeForwardMsg(e, forwardMsgs, `${dateStr} 课程表`, false)
+      const { makeForwardMsg } = common.default
+      const forwardMsg = await makeForwardMsg(e, forwardMsgs, `${dateStr} 课程表`, false)
       
       if (forwardMsg) {
         await e.reply(forwardMsg)

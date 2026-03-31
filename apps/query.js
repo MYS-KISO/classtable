@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import plugin from "../../../lib/plugins/plugin.js"
-import calculateTimeInterval from "../utils/time.js"
+import { calculateTimeInterval } from "../utils/time.js"
 
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
 
@@ -14,7 +14,7 @@ export class classtableQuery extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^((今天|明天|后天|昨天)课表|(查课表\s+)?\d{4}-\d{2}-\d{2}课表?)$',
+          reg: '^((今日|明日|后日|昨日)课表|(查课表\s+)?\d{4}-\d{2}-\d{2}课表?)$',
           fnc: 'queryDateSchedule'
         }
       ]
@@ -41,11 +41,11 @@ export class classtableQuery extends plugin {
       let dateStr = ""
 
       // 匹配相对日期
-      const relativeMatch = msg.match(/^(今天|明天|后天|昨天)课表$/)
+      const relativeMatch = msg.match(/^(今日|明日|后日|昨日)课表$/)
       if (relativeMatch) {
         const relative = relativeMatch[1]
         targetDate = new Date()
-        const offset = { "昨天": -1, "今天": 0, "明天": 1, "后天": 2 }[relative]
+        const offset = { "昨日": -1, "今日": 0, "明日": 1, "后日": 2 }[relative]
         targetDate.setDate(targetDate.getDate() + offset)
         dateStr = relative
       } else {
@@ -59,7 +59,7 @@ export class classtableQuery extends plugin {
       }
 
       if (!targetDate || isNaN(targetDate.getTime())) {
-        await e.reply("日期格式不正确，支持的格式：\n- 今天课表/明天课表/后天课表/昨天课表\n- YYYY-MM-DD课表（如：2025-04-01课表）")
+        await e.reply("日期格式不正确，支持的格式：\n- 今日课表/明日课表/后日课表/昨日课表\n- YYYY-MM-DD课表（如：2025-04-01课表）")
         return
       }
 
@@ -79,7 +79,7 @@ export class classtableQuery extends plugin {
         return
       }
 
-      // 获取当天的课程
+      // 获取当日的课程
       const dayClasses = []
       if (schedule[week] && schedule[week][dayOfWeek]) {
         for (const [node, classes] of Object.entries(schedule[week][dayOfWeek])) {

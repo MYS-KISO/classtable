@@ -14,18 +14,74 @@ export class classtableQuery extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^(#?(今日|明日|后日|昨日)课表|(查课表\s+)?\d{4}\d{2}\d{2}课表?)$',
+          reg: '^(今天|明天|后天|昨天)课表$',
+          fnc: 'queryRelativeSchedule'
+        },
+        {
+          reg: '^\\d{4}-\\d{2}-\\d{2}\\s*课表$',
           fnc: 'queryDateSchedule'
+        },
+        {
+          reg: '^查课表\\s+\\d{4}-\\d{2}-\\d{2}$',
+          fnc: 'querySearchSchedule'
         }
       ]
     })
   }
 
   /**
-   * 查询指定日期的课表
+   * 查询相对日期的课表（今天/明天/后天/昨天）
+   * @param {Object} e
+   */
+  async queryRelativeSchedule(e) {
+    const match = e.msg.trim().match(/^(今天|明天|后天|昨天)课表$/)
+    if (!match) return
+
+    const relative = match[1]
+    const targetDate = new Date()
+    const offset = { "昨天": -1, "今天": 0, "明天": 1, "后天": 2 }[relative]
+    targetDate.setDate(targetDate.getDate() + offset)
+
+    await this.renderDateSchedule(e, targetDate, relative)
+  }
+
+  /**
+   * 查询指定日期的课表（YYYY-MM-DD课表）
    * @param {Object} e
    */
   async queryDateSchedule(e) {
+    const match = e.msg.trim().match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (!match) return
+
+    const [, year, month, day] = match
+    const targetDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    const dateStr = `${year}-${month}-${day}`
+
+    await this.renderDateSchedule(e, targetDate, dateStr)
+  }
+
+  /**
+   * 查询指定日期的课表（查课表 YYYY-MM-DD）
+   * @param {Object} e
+   */
+  async querySearchSchedule(e) {
+    const match = e.msg.trim().match(/查课表\s+(\d{4})-(\d{2})-(\d{2})/)
+    if (!match) return
+
+    const [, year, month, day] = match
+    const targetDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    const dateStr = `${year}-${month}-${day}`
+
+    await this.renderDateSchedule(e, targetDate, dateStr)
+  }
+
+  /**
+   * 渲染指定日期的课表
+   * @param {Object} e 消息事件
+   * @param {Date} targetDate 目标日期
+   * @param {string} dateStr 日期显示字符串
+   */
+  async renderDateSchedule(e, targetDate, dateStr) {
     try {
       const userId = e.user_id
       const filePath = path.join(USER_DATA_DIR, `${userId}.json`)
@@ -35,31 +91,8 @@ export class classtableQuery extends plugin {
         return
       }
 
-      // 解析日期
-      const msg = e.msg.trim()
-      let targetDate = null
-      let dateStr = ""
-
-      // 匹配相对日期
-      const relativeMatch = msg.match(/^(今日|明日|后日|昨日)课表$/)
-      if (relativeMatch) {
-        const relative = relativeMatch[1]
-        targetDate = new Date()
-        const offset = { "昨日": -1, "今日": 0, "明日": 1, "后日": 2 }[relative]
-        targetDate.setDate(targetDate.getDate() + offset)
-        dateStr = relative
-      } else {
-        // 匹配 YYYY-MM-DD 格式
-        const dateMatch = msg.match(/(\d{4})(\d{2})(\d{2})/)
-        if (dateMatch) {
-          const [, year, month, day] = dateMatch
-          targetDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-          dateStr = `${year}-${month}-${day}`
-        }
-      }
-
-      if (!targetDate || isNaN(targetDate.getTime())) {
-        await e.reply("日期格式不正确，支持的格式：\n- 今日课表/明日课表/后日课表/昨日课表\n- YYYY-MM-DD课表（如：2025-04-01课表）")
+      if (isNaN(targetDate.getTime())) {
+        await e.reply("日期格式不正确")
         return
       }
 
@@ -132,7 +165,6 @@ export class classtableQuery extends plugin {
       // 标题
       // forwardMsgs.push(`${dateStr} 课程表\n第${week}周 周${weekDayStr}`)
       
-      // 课程详情
       for (const cls of mergedClasses) {
         const nodeStr = cls.node === cls.nodeEnd ? `第${cls.node}节` : `第${cls.node}-${cls.nodeEnd}节`
         const msg = `📚 ${cls.courseName}\n` +
@@ -150,7 +182,6 @@ export class classtableQuery extends plugin {
       if (forwardMsg) {
         await e.reply(forwardMsg)
       } else {
-        // 如果合并转发失败，发送普通消息
         await e.reply(forwardMsgs.join("\n---"))
       }
 

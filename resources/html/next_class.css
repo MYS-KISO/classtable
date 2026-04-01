@@ -97,6 +97,7 @@ h1 {
     display: flex;
     align-items: center;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    height: 80px;
 }
 
 .avatar {
@@ -130,7 +131,7 @@ h1 {
     font-size: 22px;
     font-weight: bold;
     color: #000;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     position: relative;
     display: inline-block;
     width: fit-content;
@@ -151,6 +152,15 @@ h1 {
     font-size: 14px;
     font-weight: 500;
     color: #111;
+    flex-wrap: wrap;
+}
+
+.meta-info span:nth-child(1){
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl;
 }
 
 .footer {

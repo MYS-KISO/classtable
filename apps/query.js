@@ -14,15 +14,15 @@ export class classtableQuery extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^(今天|明天|后天|昨天)课表$',
+          reg: '^#?(今日|明日|后日|昨日)课表$',
           fnc: 'queryRelativeSchedule'
         },
         {
-          reg: '^\\d{4}-\\d{2}-\\d{2}\\s*课表$',
+          reg: '^#?\\d{4}-\\d{2}-\\d{2}\\s*课表$',
           fnc: 'queryDateSchedule'
         },
         {
-          reg: '^查课表\\s+\\d{4}-\\d{2}-\\d{2}$',
+          reg: '^#?查课表\\s+\\d{4}-\\d{2}-\\d{2}$',
           fnc: 'querySearchSchedule'
         }
       ]
@@ -30,16 +30,16 @@ export class classtableQuery extends plugin {
   }
 
   /**
-   * 查询相对日期的课表（今天/明天/后天/昨天）
+   * 查询相对日期的课表（今日/明日/后日/昨日）
    * @param {Object} e
    */
   async queryRelativeSchedule(e) {
-    const match = e.msg.trim().match(/^(今天|明天|后天|昨天)课表$/)
+    const match = e.msg.trim().match(/^(今日|明日|后日|昨日)课表$/)
     if (!match) return
 
     const relative = match[1]
     const targetDate = new Date()
-    const offset = { "昨天": -1, "今天": 0, "明天": 1, "后天": 2 }[relative]
+    const offset = { "昨日": -1, "今日": 0, "明日": 1, "后日": 2 }[relative]
     targetDate.setDate(targetDate.getDate() + offset)
 
     await this.renderDateSchedule(e, targetDate, relative)

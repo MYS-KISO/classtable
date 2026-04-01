@@ -120,6 +120,10 @@ h1 {
     font-weight: 500;
     color: #333;
     margin-bottom: 6px;
+    max-width: 234px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .course-title {
@@ -130,6 +134,10 @@ h1 {
     position: relative;
     display: inline-block;
     width: fit-content;
+    max-width: 234px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .course-text {

@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import plugin from "../../../lib/plugins/plugin.js"
+import { calculateTimeInterval } from "../utils/time.js"
 
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
 
@@ -111,7 +112,7 @@ export class classtableQuery extends plugin {
         return
       }
 
-      // 获取当天的课程
+      // 获取当日的课程
       const dayClasses = []
       if (schedule[week] && schedule[week][dayOfWeek]) {
         for (const [node, classes] of Object.entries(schedule[week][dayOfWeek])) {
@@ -138,10 +139,18 @@ export class classtableQuery extends plugin {
       for (const cls of dayClasses) {
         if (current && 
             current.courseId === cls.courseId && 
-            current.courseName === cls.courseName &&
-            current.endTime === cls.startTime) {
-          current.endTime = cls.endTime
-          current.nodeEnd = cls.node
+            current.courseName === cls.courseName) {
+          // 计算两节课之间的间隔时间（分钟）
+          const interval = calculateTimeInterval(current.endTime, cls.startTime)
+          // 如果间隔不超过maxInterval分钟，认为是连续课程
+          if (interval <= 30) {
+            // 连续课程，更新时间
+            current.endTime = cls.endTime
+            current.nodeEnd = cls.node
+          } else {
+            // 间隔超过maxInterval分钟，不再认为是连续课程
+            break
+          }
         } else {
           if (current) mergedClasses.push(current)
           current = { ...cls, nodeEnd: cls.node }
@@ -153,18 +162,22 @@ export class classtableQuery extends plugin {
       const forwardMsgs = []
       const weekDayStr = ["", "一", "二", "三", "四", "五", "六", "日"][dayOfWeek]
       
-      forwardMsgs.push(`${dateStr} 课程表\n第${week}周 周${weekDayStr}`)
+      // 标题
+      // forwardMsgs.push(`${dateStr} 课程表\n第${week}周 周${weekDayStr}`)
       
       for (const cls of mergedClasses) {
         const nodeStr = cls.node === cls.nodeEnd ? `第${cls.node}节` : `第${cls.node}-${cls.nodeEnd}节`
         const msg = `📚 ${cls.courseName}\n` +
-                   `⏰ ${cls.startTime} - ${cls.endTime}（${nodeStr}）`
+                   `⏰ ${cls.startTime} - ${cls.endTime}（${nodeStr}）\n` +
+                   `👤 ${cls.teacher || '未知教师'}\n` +
+                   `📍 ${cls.room || '未知教室'}`
         forwardMsgs.push(msg)
       }
 
       // 发送合并转发
       const common = await import("../../../lib/common/common.js")
-      const forwardMsg = await common.default.makeForwardMsg(e, forwardMsgs, `${dateStr} 课程表`, false)
+      const { makeForwardMsg } = common.default
+      const forwardMsg = await makeForwardMsg(e, forwardMsgs, `${dateStr} 课程表\n第${week}周 周${weekDayStr}`, false)
       
       if (forwardMsg) {
         await e.reply(forwardMsg)

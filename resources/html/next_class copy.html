@@ -91,11 +91,14 @@
                     <img src="https://q1.qlogo.cn/g?b=qq&nk=$0&s=100" alt="用户头像" style="width:100%; height:100%; border-radius:16px;">
                 </div>
                 <div class="info">
-                    <div class="username">MoistCrystal</div>
-                        <div class="username">
-                        <span>="background-color: green;">休息中</span>
+                    <div class="username">
+                        <span class="type" style="background-color: mediumseagreen;">休息中</span>
                         {{item.userName}}
                     </div>
+                    <div class="course-title course-text">
+                        {{item.NoCourseTitle || "暂无课程信息"}}
+                    </div>
+                        <p style="margin:0; font-size:14px; color:#666;">{{item.NoCourseTip}}</p>
                 </div>
             </div>
     </div>

@@ -43,8 +43,13 @@
                 </div>
                 {{else}}
                 <div class="info">
-                    <div class="username">{{item.userName}}</div>
-                        <div class="course-title course-text">{{item.NoCourseTitle || "暂无课程信息"}}</div>
+                    <div class="username">
+                        <span>="background-color: green;">休息中</span>
+                        {{item.userName}}
+                    </div>
+                    <div class="course-title course-text">
+                        {{item.NoCourseTitle || "暂无课程信息"}}
+                    </div>
                         <p style="margin:0; font-size:14px; color:#666;">{{item.NoCourseTip}}</p>
                 </div>
                 {{/if}}

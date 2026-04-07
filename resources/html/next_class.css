@@ -156,7 +156,7 @@ h1 {
 }
 
 .meta-info span:nth-child(1){
-    max-width: 180px;
+    max-width: 165px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

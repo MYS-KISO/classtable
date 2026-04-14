@@ -96,9 +96,9 @@ export class classtableSkip extends plugin {
         }
       }
 
-      // 如果没有当前课程，查找最近6小时内的下一节课
+      // 如果没有当前课程，查找最近24小时内的下一节课
       if (!currentClass) {
-        const oneHourLater = new Date(currentTime.getTime() + 6 * 60 * 60 * 1000)
+        const oneHourLater = new Date(currentTime.getTime() + 24 * 60 * 60 * 1000)
 
         if (schedule[currentWeek] && schedule[currentWeek][currentDay]) {
           const todayClasses = []
@@ -141,7 +141,7 @@ export class classtableSkip extends plugin {
       }
 
       if (!currentClass) {
-        return await e.reply("没课翘不了咕qwq")
+        return await e.reply("你今天没有课啦，翘不了咕qwq")
       }
 
       // 计算课程结束时间

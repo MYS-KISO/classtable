@@ -34,7 +34,7 @@ export class classtableQuery extends plugin {
    * @param {Object} e
    */
   async queryRelativeSchedule(e) {
-    const match = e.msg.trim().match(/^(今日|明日|后日|昨日)课表$/)
+    const match = e.msg.trim().match(/^#?(今日|明日|后日|昨日)课表$/)
     if (!match) return
 
     const relative = match[1]

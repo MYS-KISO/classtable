@@ -121,7 +121,7 @@ h1 {
     font-weight: 500;
     color: #333;
     margin-bottom: 6px;
-    max-width: 234px;
+    max-width: 230px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -135,7 +135,7 @@ h1 {
     position: relative;
     display: inline-block;
     width: fit-content;
-    max-width: 234px;
+    max-width: 230px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -156,7 +156,7 @@ h1 {
 }
 
 .meta-info span:nth-child(1){
-    max-width: 145px;
+    max-width: 150px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

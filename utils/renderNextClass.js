@@ -197,7 +197,7 @@ async function getMultipleNextClassRenderData(e, limit = null) {
     // 使用Promise.all并行处理用户数据
     const userPromises = userIds.map(async (userId) => {
       let userName = "未知用户"
-      let avatarUrl = `https://q2.qlogo.cn/g?b=qq&nk=${userId}&s=100`
+      let avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${userId}&s=100&t=${Date.now()}`;
       try {
         const memberInfo = e.bot.gml.get(e.group_id)
         const member = memberInfo.get(Number(userId))
@@ -232,13 +232,13 @@ async function getMultipleNextClassRenderData(e, limit = null) {
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           return {
-            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
+            userName: userName,
             avatar: avatarUrl,
             hasClass: false,
             type: "空闲",
             typeColor: "#50ff05ff",
-            NoCourseTitle: "今日无课",
-            NoCourseTip: "好好休息一下吧"
+            NoCourseTitle: "好诶，没课啦！",
+            NoCourseTip: "好好休息一下吧w~"
           }
         } else {
           let nowType = "将开始"
@@ -271,15 +271,16 @@ async function getMultipleNextClassRenderData(e, limit = null) {
           }
 
           return {
-            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
+            userName: userName,
             avatar: avatarUrl,
             hasClass: true,
-            className: (nextClassInfo.courseName || "").length > 8 ? (nextClassInfo.courseName.substring(0, 8) + "...") : nextClassInfo.courseName,
+            className: nextClassInfo.courseName,
             type: nowType,
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,
             endTime: nextClassInfo.endTime,
-            timeUntilEnd: timeUntilEnd
+            timeUntilEnd: timeUntilEnd,
+            room: nextClassInfo.room
           }
         }
       } catch (error) {
@@ -406,7 +407,7 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
     // 使用Promise.all并行处理用户数据
     const userPromises = userIds.map(async (userId) => {
       let userName = `id${userId}`
-      let avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${userId}&s=100`
+      let avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${userId}&s=100&t=${Date.now()}`;
       
       const filePath = getSchedulePath(userId)
       try {
@@ -421,13 +422,13 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
 
         if (!nextClassInfo || nextClassInfo.status === 'noneToday') {
           return {
-            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
+            userName: userName,
             avatar: avatarUrl,
             hasClass: false,
             type: "空闲",
             typeColor: "#50ff05ff",
-            NoCourseTitle: "好耶！没课喵",
-            NoCourseTip: "休息吧喵"
+            NoCourseTitle: "好耶，没课啦！",
+            NoCourseTip: "好好休息一下吧w~"
           }
         } else {
           let nowType = "将开始"
@@ -460,15 +461,16 @@ async function getAllUsersNextClassRenderData(e, limit = null) {
           }
 
           return {
-            userName: (userName || "").length > 12 ? (userName.substring(0, 12) + "...") : userName,
+            userName: userName,
             avatar: avatarUrl,
             hasClass: true,
-            className: (nextClassInfo.courseName || "").length > 8 ? (nextClassInfo.courseName.substring(0, 8) + "...") : nextClassInfo.courseName,
+            className: nextClassInfo.courseName,
             type: nowType,
             typeColor: typeColor,
             startTime: nextClassInfo.startTime,
             endTime: nextClassInfo.endTime,
-            timeUntilEnd: timeUntilEnd
+            timeUntilEnd: timeUntilEnd,
+            room: nextClassInfo.room
           }
         }
       } catch (error) {
@@ -604,6 +606,7 @@ function findNextClass(schedule, currentWeek, currentDay, currentHour, currentMi
         startTime: consecutiveResult.startTime,
         endTime: consecutiveResult.finalEndTime,
         week: currentWeek,
+        room: cls.room || '暂无教室信息',
         status: 'ongoing'
       }
     }

@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import plugin from "../../../lib/plugins/plugin.js"
+import { calculateTimeInterval } from "../utils/time.js"
 
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
 
@@ -13,15 +14,15 @@ export class classtableQuery extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^(今天|明天|后天|昨天)课表$',
+          reg: '^#?(今日|明日|后日|昨日)课表$',
           fnc: 'queryRelativeSchedule'
         },
         {
-          reg: '^\\d{4}-\\d{2}-\\d{2}\\s*课表$',
+          reg: '^#?\\d{4}-\\d{2}-\\d{2}\\s*课表$',
           fnc: 'queryDateSchedule'
         },
         {
-          reg: '^查课表\\s+\\d{4}-\\d{2}-\\d{2}$',
+          reg: '^#?查课表\\s+\\d{4}-\\d{2}-\\d{2}$',
           fnc: 'querySearchSchedule'
         }
       ]
@@ -29,16 +30,16 @@ export class classtableQuery extends plugin {
   }
 
   /**
-   * 查询相对日期的课表（今天/明天/后天/昨天）
+   * 查询相对日期的课表（今日/明日/后日/昨日）
    * @param {Object} e
    */
   async queryRelativeSchedule(e) {
-    const match = e.msg.trim().match(/^(今天|明天|后天|昨天)课表$/)
+    const match = e.msg.trim().match(/^#?(今日|明日|后日|昨日)课表$/)
     if (!match) return
 
     const relative = match[1]
     const targetDate = new Date()
-    const offset = { "昨天": -1, "今天": 0, "明天": 1, "后天": 2 }[relative]
+    const offset = { "昨日": -1, "今日": 0, "明日": 1, "后日": 2 }[relative]
     targetDate.setDate(targetDate.getDate() + offset)
 
     await this.renderDateSchedule(e, targetDate, relative)
@@ -111,7 +112,7 @@ export class classtableQuery extends plugin {
         return
       }
 
-      // 获取当天的课程
+      // 获取当日的课程
       const dayClasses = []
       if (schedule[week] && schedule[week][dayOfWeek]) {
         for (const [node, classes] of Object.entries(schedule[week][dayOfWeek])) {
@@ -143,37 +144,23 @@ export class classtableQuery extends plugin {
       // 按“课程名+教师+教室”合并同一天内相同课程，时间取最早开始到最晚结束
       const mergedMap = new Map()
       for (const cls of dayClasses) {
-        const courseName = normalizeText(cls.courseName)
-        const teacher = normalizeText(cls.teacher)
-        const room = normalizeText(cls.room)
-        const mergeKey = `${courseName}__${teacher}__${room}`
-
-        if (!mergedMap.has(mergeKey)) {
-          mergedMap.set(mergeKey, {
-            ...cls,
-            nodeList: [cls.node],
-            firstNode: cls.node,
-            startMin: parseMinutes(cls.startTime),
-            endMin: parseMinutes(cls.endTime)
-          })
-          continue
-        }
-
-        const merged = mergedMap.get(mergeKey)
-        const startMin = parseMinutes(cls.startTime)
-        const endMin = parseMinutes(cls.endTime)
-
-        if (startMin < merged.startMin) {
-          merged.startMin = startMin
-          merged.startTime = cls.startTime
-        }
-        if (endMin > merged.endMin) {
-          merged.endMin = endMin
-          merged.endTime = cls.endTime
-        }
-
-        if (cls.node < merged.firstNode) {
-          merged.firstNode = cls.node
+        if (current && 
+            current.courseId === cls.courseId && 
+            current.courseName === cls.courseName) {
+          // 计算两节课之间的间隔时间（分钟）
+          const interval = calculateTimeInterval(current.endTime, cls.startTime)
+          // 如果间隔不超过maxInterval分钟，认为是连续课程
+          if (interval <= 30) {
+            // 连续课程，更新时间
+            current.endTime = cls.endTime
+            current.nodeEnd = cls.node
+          } else {
+            // 间隔超过maxInterval分钟，不再认为是连续课程
+            break
+          }
+        } else {
+          if (current) mergedClasses.push(current)
+          current = { ...cls, nodeEnd: cls.node }
         }
         merged.nodeList.push(cls.node)
       }
@@ -211,18 +198,22 @@ export class classtableQuery extends plugin {
       const forwardMsgs = []
       const weekDayStr = ["", "一", "二", "三", "四", "五", "六", "日"][dayOfWeek]
       
-      forwardMsgs.push(`${dateStr} 课程表\n第${week}周 周${weekDayStr}`)
+      // 标题
+      // forwardMsgs.push(`${dateStr} 课程表\n第${week}周 周${weekDayStr}`)
       
       for (const cls of mergedClasses) {
         const nodeStr = formatNodeStr(cls.nodeList)
         const msg = `📚 ${cls.courseName}\n` +
-                   `⏰ ${cls.startTime} - ${cls.endTime}（${nodeStr}）`
+                   `⏰ ${cls.startTime} - ${cls.endTime}（${nodeStr}）\n` +
+                   `👤 ${cls.teacher || '未知教师'}\n` +
+                   `📍 ${cls.room || '未知教室'}`
         forwardMsgs.push(msg)
       }
 
       // 发送合并转发
       const common = await import("../../../lib/common/common.js")
-      const forwardMsg = await common.default.makeForwardMsg(e, forwardMsgs, `${dateStr} 课程表`, false)
+      const { makeForwardMsg } = common.default
+      const forwardMsg = await makeForwardMsg(e, forwardMsgs, `${dateStr} 课程表\n第${week}周 周${weekDayStr}`, false)
       
       if (forwardMsg) {
         await e.reply(forwardMsg)

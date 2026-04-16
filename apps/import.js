@@ -3,97 +3,215 @@ import path from "node:path"
 import plugin from "../../../lib/plugins/plugin.js"
 import { postJson } from "./utils.js"
 import config from "../utils/config.js"
+import {
+  convertNativeToInternal,
+  convertShiguangToInternal,
+  detectScheduleFormat
+} from "../utils/scheduleFormat.js"
 
 const DATA_DIR = path.join("./plugins", "classtable", "data")
-const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
-const GROUP_DATA_DIR = path.join("./plugins", "classtable", "data", "groups")
+const USER_DATA_DIR = path.join(DATA_DIR, "users")
+const GROUP_DATA_DIR = path.join(DATA_DIR, "groups")
+const MAX_IMPORT_FILE_SIZE = 2 * 1024 * 1024
+const WAKEUP_SHARE_REG = /这是来自「WakeUp课程表」的课表分享，30分钟内有效哦，如果失效请朋友再分享一遍叭。为了保护隐私我们选择不监听你的剪贴板，请复制这条消息后，打开App的主界面，右上角第二个按钮 -> 从分享口令导入，按操作提示即可完成导入~分享口令为「(.*)」/
 
-// 确保目录存在
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
-if (!fs.existsSync(USER_DATA_DIR)) fs.mkdirSync(USER_DATA_DIR, { recursive: true })
-if (!fs.existsSync(GROUP_DATA_DIR)) fs.mkdirSync(GROUP_DATA_DIR, { recursive: true })
+for (const dir of [DATA_DIR, USER_DATA_DIR, GROUP_DATA_DIR]) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+}
 
 export class classtableImport extends plugin {
   constructor() {
     super({
-      name: 'classtable:导入课表',
-      dsc: '从WakeUp课程表导入课表',
-      event: 'message',
+      name: "classtable:导入课表",
+      dsc: "支持 WakeUp 口令、插件标准 JSON、拾光 JSON 的课表导入",
+      event: "message",
       priority: 10,
       rule: [
         {
-          reg: '^这是来自「WakeUp课程表」的课表分享',
-          fnc: 'importSchedule'
+          reg: "^#?(?:ct|课表|classtable)?导入课表$",
+          fnc: "prepareJsonImport"
+        },
+        {
+          reg: "^.*$",
+          fnc: "receiveScheduleFile"
+        },
+        {
+          reg: "^这是来自「WakeUp课程表」的课表分享",
+          fnc: "importWakeUpSchedule"
         }
       ]
     })
   }
 
-  async importSchedule(e) {
-    await e.recall()
-    try {
-      const match = e.msg.match(/这是来自「WakeUp课程表」的课表分享，30分钟内有效哦，如果失效请朋友再分享一遍叭。为了保护隐私我们选择不监听你的剪贴板，请复制这条消息后，打开App的主界面，右上角第二个按钮 -> 从分享口令导入，按操作提示即可完成导入~分享口令为「(.*)」/)
-      if (!match) {
-        await e.reply('无法识别分享口令，请确保发送完整的分享口令消息')
-        return
+  async prepareJsonImport(e) {
+    this.setContext("importScheduleFile", e.isGroup)
+    await e.reply("请发送 JSON 课表文件，我会自动识别插件标准格式或拾光格式")
+  }
+
+  async receiveScheduleFile(e) {
+    if (!e.file?.name) return false
+
+    const waitingImport = this.getContext("importScheduleFile", e.isGroup)
+    const isAutoImportFile = /^classtable-.*\.json$/i.test(e.file.name)
+    if (!waitingImport && !isAutoImportFile) return false
+
+    if (!/\.json$/i.test(e.file.name)) {
+      if (waitingImport) {
+        this.finish("importScheduleFile", e.isGroup)
+        await e.reply("导入失败：请发送 `.json` 格式的课程表文件喵")
       }
+      return false
+    }
+
+    if (waitingImport) {
+      this.finish("importScheduleFile", e.isGroup)
+    }
+
+    try {
+      const fileContent = await this.downloadIncomingFile(e)
+      const rawData = JSON.parse(fileContent)
+      const format = detectScheduleFormat(rawData)
+
+      if (!format) {
+        await e.reply("导入失败：暂时无法识别这个 JSON 课表格式。支持插件标准格式、拾光格式，以及旧版内部存档格式。")
+        return true
+      }
+
+      let courseSchedule
+      if (format === "native") {
+        courseSchedule = convertNativeToInternal(rawData)
+      } else if (format === "shiguang") {
+        courseSchedule = convertShiguangToInternal(rawData)
+      } else {
+        courseSchedule = rawData
+      }
+
+      this.saveUserSchedule(e.user_id, e.isGroup ? e.group_id : null, courseSchedule)
+
+      const importedFrom = format === "native"
+        ? "插件标准格式"
+        : format === "shiguang"
+          ? "拾光格式"
+          : "旧版内部格式"
+
+      await e.reply(`导入课程表成功，已识别为${importedFrom}。重复导入会覆盖之前的数据。`)
+      if (e.isGroup) {
+        await e.reply("已收到文件，如有需要请手动撤回。", false, { at: true })
+      }
+      return true
+    } catch (error) {
+      logger.error(`[ClassTable] 文件导入课程表失败: ${error.stack || error}`)
+      await e.reply(`导入课程表失败：${error.message || error}`)
+      return true
+    }
+  }
+
+  async importWakeUpSchedule(e) {
+    await e.recall()
+
+    try {
+      const match = e.msg.match(WAKEUP_SHARE_REG)
+      if (!match) {
+        await e.reply("无法识别分享口令，请确认发送的是完整的 WakeUp 分享消息。")
+        return true
+      }
+
       const shareCode = match[1]
       const jsonData = await this.getCourseScheduleFromApi(shareCode)
       if (!jsonData || jsonData.status !== 1 || jsonData.message !== "success" || !jsonData.data) {
         logger.warn(`[ClassTable] 导入课程表失败: ${JSON.stringify(jsonData)}`)
-        await e.reply(`尝试导入课程表失败，请检查分享口令是否正确或是否已过期\n\n错误返回值: ${JSON.stringify(jsonData)}`)
-        return
+        await e.reply(`尝试导入课程表失败，请检查分享口令是否正确或是否已过期。\n\n错误返回值: ${JSON.stringify(jsonData)}`)
+        return true
       }
+
       const courseSchedule = this.generateCourseScheduleFromData(jsonData)
-      const userId = e.user_id
-      const groupId = e.isGroup ? e.group_id : null
+      this.saveUserSchedule(e.user_id, e.isGroup ? e.group_id : null, courseSchedule)
 
-      // 保存用户课表数据到 users/${user_id}.json
-      const userFilePath = path.join(USER_DATA_DIR, `${userId}.json`)
-      fs.writeFileSync(userFilePath, JSON.stringify(courseSchedule, null, 2), 'utf8')
-      if (groupId) this.addUserToGroupList(groupId, userId)
-
-      await e.reply(`QwQ导入课程表成功，如果重复导入将会覆盖之前的数据\nBot正在尝试撤回你的口令，如果撤回失败请手动撤回哦~`)
-
-    } catch (err) {
-      logger.error(`[ClassTable] 导入课程表失败: ${err}`)
-      await e.reply(`课程表功能处理失败，可能是反代服务器炸了，请让Bot主将报错日志发给皮梦检查`)
+      await e.reply("导入课程表成功，重复导入会覆盖之前的数据。Bot 正在尝试撤回你的口令，如果撤回失败请手动撤回。")
+      return true
+    } catch (error) {
+      logger.error(`[ClassTable] WakeUp 导入课程表失败: ${error.stack || error}`)
+      await e.reply("课程表导入失败，可能是接口异常或分享口令已失效。")
+      return true
     }
   }
 
-  /**
-   * 添加用户到群组用户列表
-   * @param {string} groupId - 群组ID
-   * @param {string} userId - 用户ID
-   */
+  saveUserSchedule(userId, groupId, courseSchedule) {
+    const userFilePath = path.join(USER_DATA_DIR, `${userId}.json`)
+    fs.writeFileSync(userFilePath, JSON.stringify(courseSchedule, null, 2), "utf8")
+
+    if (groupId) {
+      this.addUserToGroupList(groupId, userId)
+    }
+  }
+
   addUserToGroupList(groupId, userId) {
     const groupUserListPath = path.join(GROUP_DATA_DIR, `${groupId}_userlist.json`)
     let userList = []
+
     if (fs.existsSync(groupUserListPath)) {
       try {
-        const content = fs.readFileSync(groupUserListPath, 'utf8')
-        userList = JSON.parse(content)
-      } catch (err) {
-        logger.error(`[ClassTable] 读取群组用户列表失败: ${err}`)
-        userList = []
+        userList = JSON.parse(fs.readFileSync(groupUserListPath, "utf8"))
+      } catch (error) {
+        logger.error(`[ClassTable] 读取群组用户列表失败: ${error.stack || error}`)
       }
     }
+
     if (!userList.includes(userId)) {
       userList.push(userId)
-      try {
-        fs.writeFileSync(groupUserListPath, JSON.stringify(userList, null, 2), 'utf8')
-        logger.info(`[ClassTable] 已将用户${userId}添加到群组${groupId}的用户列表`)
-      } catch (err) {
-        logger.error(`[ClassTable] 保存群组用户列表失败: ${err}`)
-      }
+      fs.writeFileSync(groupUserListPath, JSON.stringify(userList, null, 2), "utf8")
     }
   }
 
-  /**
-   * 从WakeUp课程表API获取课程表数据
-   * @param {*} shareCode 
-   * @returns {Object} json数据
-   */
+  async downloadIncomingFile(e) {
+    const url = await this.resolveIncomingFileUrl(e)
+    if (!url) {
+      throw new Error("无法获取文件下载地址，当前适配器可能不支持文件导入")
+    }
+
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`文件下载失败：HTTP ${response.status}`)
+    }
+
+    const sizeHeader = Number(response.headers.get("content-length") || 0)
+    if (sizeHeader > MAX_IMPORT_FILE_SIZE) {
+      throw new Error("导入文件过大，JSON 文件需小于 2MB")
+    }
+
+    const text = await response.text()
+    if (Buffer.byteLength(text, "utf8") > MAX_IMPORT_FILE_SIZE) {
+      throw new Error("导入文件过大，JSON 文件需小于 2MB")
+    }
+
+    return text
+  }
+
+  async resolveIncomingFileUrl(e) {
+    const fid = e.file?.fid
+    if (!fid) return null
+
+    const candidates = [
+      () => e.friend?.getFileUrl?.(fid),
+      () => e.group?.getFileUrl?.(fid),
+      () => e.bot?.pickFriend?.(e.user_id)?.getFileUrl?.(fid),
+      () => e.isGroup ? e.bot?.pickGroup?.(e.group_id)?.getFileUrl?.(fid) : null,
+      () => Bot?.pickFriend?.(e.user_id)?.getFileUrl?.(fid),
+      () => e.isGroup ? Bot?.pickGroup?.(e.group_id)?.getFileUrl?.(fid) : null
+    ]
+
+    for (const getter of candidates) {
+      try {
+        const result = await getter?.()
+        if (typeof result === "string" && result) return result
+        if (result?.url) return result.url
+      } catch {
+      }
+    }
+
+    return null
+  }
+
   async getCourseScheduleFromApi(shareCode) {
     const url = config.WAKEUP_URL
     const token = config.APITOKEN
@@ -102,26 +220,20 @@ export class classtableImport extends plugin {
       throw new Error("classtable 配置缺少 WAKEUP_URL 或 APITOKEN")
     }
 
-    try {
-      const responseData = await postJson(url, {
-        shareToken: shareCode,
-        apiToken: token ? token : null
-      }, 5000)
+    const responseData = await postJson(url, {
+      shareToken: shareCode,
+      apiToken: token || null
+    }, 5000)
 
-      if (!responseData || responseData.code !== 0 || responseData.message !== 'success' || !responseData.data) {
-        return responseData
-      }
+    if (!responseData || responseData.code !== 0 || responseData.message !== "success" || !responseData.data) {
+      return responseData
+    }
 
-      const decodedData = Buffer.from(responseData.data, 'base64').toString('utf8')
-
-      return {
-        ...responseData,
-        status: 1,
-        data: decodedData
-      }
-    } catch (err) {
-      logger.error(`[ClassTable] API请求失败: ${err}`)
-      throw err
+    const decodedData = Buffer.from(responseData.data, "base64").toString("utf8")
+    return {
+      ...responseData,
+      status: 1,
+      data: decodedData
     }
   }
 
@@ -137,42 +249,38 @@ export class classtableImport extends plugin {
         try {
           parsedChunks.push(JSON.parse(line))
         } catch {
-          // 忽略非JSON行（例如说明文本）
         }
       }
 
-      if (parsedChunks.length >= 4) {
-        const timeTableIdx = parsedChunks.findIndex((item) => Array.isArray(item) && item.length > 0 && item[0]?.node != null)
-        const settingsIdx = parsedChunks.findIndex((item) => !Array.isArray(item) && item && (item.maxWeek != null || item.startDate != null || item.nodes != null))
-        const coursesIdx = parsedChunks.findIndex((item) => Array.isArray(item) && item.length > 0 && item[0]?.courseName != null)
-        const scheduleIdx = parsedChunks.findIndex((item) => Array.isArray(item) && item.length > 0 && item[0]?.day != null && item[0]?.startNode != null)
+      if (parsedChunks.length < 4) return null
 
-        if (timeTableIdx !== -1 && settingsIdx !== -1 && coursesIdx !== -1 && scheduleIdx !== -1) {
-          return {
-            timeTable: parsedChunks[timeTableIdx],
-            settings: parsedChunks[settingsIdx],
-            courses: parsedChunks[coursesIdx],
-            schedule: parsedChunks[scheduleIdx]
-          }
-        }
+      const timeTableIdx = parsedChunks.findIndex((item) => Array.isArray(item) && item.length > 0 && item[0]?.node != null)
+      const settingsIdx = parsedChunks.findIndex((item) => !Array.isArray(item) && item && (item.maxWeek != null || item.startDate != null || item.nodes != null))
+      const coursesIdx = parsedChunks.findIndex((item) => Array.isArray(item) && item.length > 0 && item[0]?.courseName != null)
+      const scheduleIdx = parsedChunks.findIndex((item) => Array.isArray(item) && item.length > 0 && item[0]?.day != null && item[0]?.startNode != null)
 
-        // fallback
-        const lastFour = parsedChunks.slice(-4)
+      if (timeTableIdx !== -1 && settingsIdx !== -1 && coursesIdx !== -1 && scheduleIdx !== -1) {
         return {
-          timeTable: lastFour[0],
-          settings: lastFour[1],
-          courses: lastFour[2],
-          schedule: lastFour[3]
+          timeTable: parsedChunks[timeTableIdx],
+          settings: parsedChunks[settingsIdx],
+          courses: parsedChunks[coursesIdx],
+          schedule: parsedChunks[scheduleIdx]
         }
       }
 
-      return null
+      const lastFour = parsedChunks.slice(-4)
+      return {
+        timeTable: lastFour[0],
+        settings: lastFour[1],
+        courses: lastFour[2],
+        schedule: lastFour[3]
+      }
     }
 
     const resolvePayload = (payload, depth = 0) => {
       if (depth > 5 || payload == null) return null
 
-      if (typeof payload === 'object') {
+      if (typeof payload === "object") {
         if (payload.timeTable && payload.settings && payload.courses && payload.schedule) {
           return {
             timeTable: payload.timeTable,
@@ -195,10 +303,9 @@ export class classtableImport extends plugin {
         return null
       }
 
-      if (typeof payload === 'string') {
+      if (typeof payload === "string") {
         const text = payload.trim()
 
-        // 先尝试把字符串当成JSON解析（兼容外层包裹对象和转义JSON字符串）
         try {
           const parsed = JSON.parse(text)
           const resolved = resolvePayload(parsed, depth + 1)
@@ -209,11 +316,10 @@ export class classtableImport extends plugin {
         const legacy = tryBuildLegacyParts(text)
         if (legacy) return legacy
 
-        // 兼容字面量转义换行（"\\n"）
-        if (text.includes('\\n')) {
-          const unescaped = text.replace(/\\n/g, '\n')
-          const legacyFromEscaped = tryBuildLegacyParts(unescaped)
-          if (legacyFromEscaped) return legacyFromEscaped
+        if (text.includes("\\n")) {
+          const unescaped = text.replace(/\\n/g, "\n")
+          const escapedLegacy = tryBuildLegacyParts(unescaped)
+          if (escapedLegacy) return escapedLegacy
         }
       }
 
@@ -222,7 +328,7 @@ export class classtableImport extends plugin {
 
     const parsed = resolvePayload(data?.data)
     if (!parsed) {
-      throw new Error('课程表数据格式异常，无法解析 timeTable/settings/courses/schedule')
+      throw new Error("课程表数据格式异常，无法解析 timeTable/settings/courses/schedule")
     }
 
     return parsed
@@ -232,23 +338,18 @@ export class classtableImport extends plugin {
     const parsedData = this.parseNestedJson(data)
     const { courses, schedule, timeTable, settings } = parsedData
 
-    // 建立课程ID到课程信息的映射
     const courseDict = {}
     for (const course of courses) {
       courseDict[course.id] = course
     }
 
-    // 建立节次到时间的映射
     const nodeTimeDict = {}
     for (const item of timeTable) {
       nodeTimeDict[item.node] = item
     }
 
-    // 获取开学日期和最大周数
     const maxWeek = settings.maxWeek || 18
-    const startDate = settings.startDate || "2026-03-04" // 从设置中获取开学日期，如果没有则使用默认值
-
-    // 生成完整的课程表数据
+    const startDate = settings.startDate || "2026-03-04"
     const courseSchedule = []
 
     for (const scheduleItem of schedule) {
@@ -256,11 +357,8 @@ export class classtableImport extends plugin {
       const courseInfo = courseDict[courseId] || {}
       const { startNode, step, day, startWeek, endWeek, teacher, room, type } = scheduleItem
       const courseName = courseInfo.courseName || "未知课程"
-      // type: 0 = 全周, 1 = 单周(odd), 2 = 双周(even)
-
-      // 获取上课的时间段
       const classTimes = []
-      // 如果课程使用自定义时间(ownTime为true)，直接使用API提供的时间
+
       if (scheduleItem.ownTime && scheduleItem.startTime && scheduleItem.endTime) {
         classTimes.push({
           node: startNode,
@@ -268,10 +366,9 @@ export class classtableImport extends plugin {
           endTime: scheduleItem.endTime
         })
       } else {
-        // 从timeTable根据node查找时间
-        for (let i = 0; i < step; i++) {
-          const node = startNode + i
-          const timeInfo = nodeTimeDict[node] || { startTime: "未知", endTime: "未知" }
+        for (let index = 0; index < step; index += 1) {
+          const node = startNode + index
+          const timeInfo = nodeTimeDict[node] || { startTime: "00:00", endTime: "00:00" }
           classTimes.push({
             node,
             startTime: timeInfo.startTime,
@@ -280,63 +377,55 @@ export class classtableImport extends plugin {
         }
       }
 
-      // 将课程信息整合
-      const courseEntry = {
+      courseSchedule.push({
         courseId,
         courseName,
         day,
         startWeek,
         endWeek,
         classTimes,
-        teacher: teacher || '',
-        room: room || '',
+        teacher: teacher || "",
+        room: room || "",
         type: type || 0
-      }
-
-      courseSchedule.push(courseEntry)
+      })
     }
 
-    // 按周次、星期和节次整理课程表
     const weeklySchedule = {}
-    for (let week = 1; week <= maxWeek; week++) {
+    for (let week = 1; week <= maxWeek; week += 1) {
       weeklySchedule[week] = {}
     }
+
     for (const entry of courseSchedule) {
-      for (let week = entry.startWeek; week <= entry.endWeek; week++) {
-        if (week > maxWeek) continue
+      for (let week = entry.startWeek; week <= entry.endWeek; week += 1) {
+        if (week > maxWeek || entry.day > 7) continue
+        if (entry.type === 1 && week % 2 === 0) continue
+        if (entry.type === 2 && week % 2 === 1) continue
 
-        const day = entry.day
-        if (day > 7) continue // 忽略无效的星期
-
-        if (!weeklySchedule[week][day]) {
-          weeklySchedule[week][day] = {}
+        if (!weeklySchedule[week][entry.day]) {
+          weeklySchedule[week][entry.day] = {}
         }
 
-        // 处理单双周：type === 1 表示单周(odd)，type === 2 表示双周(even)
-        if (entry.type === 1 && (week % 2) === 0) continue
-        if (entry.type === 2 && (week % 2) === 1) continue
-
         for (const time of entry.classTimes) {
-          const node = time.node
-          if (!weeklySchedule[week][day][node]) {
-            weeklySchedule[week][day][node] = []
+          if (!weeklySchedule[week][entry.day][time.node]) {
+            weeklySchedule[week][entry.day][time.node] = []
           }
 
-          weeklySchedule[week][day][node].push({
+          weeklySchedule[week][entry.day][time.node].push({
             courseId: entry.courseId,
             courseName: entry.courseName,
             startTime: time.startTime,
             endTime: time.endTime,
-            week: week,
+            week,
             startWeek: entry.startWeek,
             endWeek: entry.endWeek,
-            teacher: entry.teacher || '',
-            room: entry.room || '',
-            type: entry.type || 0
+            teacher: entry.teacher,
+            room: entry.room,
+            type: entry.type
           })
         }
       }
     }
+
     const cleanedWeeklySchedule = {}
     for (const [week, days] of Object.entries(weeklySchedule)) {
       if (Object.keys(days).length > 0) {
@@ -344,11 +433,11 @@ export class classtableImport extends plugin {
       }
     }
 
-    // 添加元数据，包括开学日期
     return {
       schedule: cleanedWeeklySchedule,
-      startDate: startDate,
-      maxWeek: maxWeek
+      startDate,
+      maxWeek,
+      updateTime: new Date().toISOString()
     }
   }
 }

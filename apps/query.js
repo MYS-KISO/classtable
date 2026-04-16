@@ -133,9 +133,16 @@ export class classtableQuery extends plugin {
       // 按节次排序
       dayClasses.sort((a, b) => a.node - b.node)
 
-      // 合并连续相同课程
-      const mergedClasses = []
-      let current = null
+      const parseMinutes = (time) => {
+        const [h, m] = String(time || '').split(':').map(n => parseInt(n, 10))
+        if (Number.isNaN(h) || Number.isNaN(m)) return Number.MAX_SAFE_INTEGER
+        return h * 60 + m
+      }
+
+      const normalizeText = (text) => String(text || '').trim()
+
+      // 按“课程名+教师+教室”合并同一天内相同课程，时间取最早开始到最晚结束
+      const mergedMap = new Map()
       for (const cls of dayClasses) {
         if (current && 
             current.courseId === cls.courseId && 
@@ -155,8 +162,37 @@ export class classtableQuery extends plugin {
           if (current) mergedClasses.push(current)
           current = { ...cls, nodeEnd: cls.node }
         }
+        merged.nodeList.push(cls.node)
       }
-      if (current) mergedClasses.push(current)
+
+      const mergedClasses = Array.from(mergedMap.values()).sort((a, b) => {
+        if (a.startMin !== b.startMin) return a.startMin - b.startMin
+        return a.firstNode - b.firstNode
+      })
+
+      const formatNodeStr = (nodeList) => {
+        const nodes = [...new Set(nodeList)].sort((a, b) => a - b)
+        if (nodes.length === 0) return ''
+
+        const parts = []
+        let rangeStart = nodes[0]
+        let prev = nodes[0]
+
+        for (let i = 1; i < nodes.length; i++) {
+          const node = nodes[i]
+          if (node === prev + 1) {
+            prev = node
+            continue
+          }
+
+          parts.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`)
+          rangeStart = node
+          prev = node
+        }
+
+        parts.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`)
+        return `第${parts.join('、')}节`
+      }
 
       // 生成合并转发消息
       const forwardMsgs = []
@@ -166,7 +202,7 @@ export class classtableQuery extends plugin {
       // forwardMsgs.push(`${dateStr} 课程表\n第${week}周 周${weekDayStr}`)
       
       for (const cls of mergedClasses) {
-        const nodeStr = cls.node === cls.nodeEnd ? `第${cls.node}节` : `第${cls.node}-${cls.nodeEnd}节`
+        const nodeStr = formatNodeStr(cls.nodeList)
         const msg = `📚 ${cls.courseName}\n` +
                    `⏰ ${cls.startTime} - ${cls.endTime}（${nodeStr}）\n` +
                    `👤 ${cls.teacher || '未知教师'}\n` +

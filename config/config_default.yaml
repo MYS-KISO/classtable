@@ -1,0 +1,13 @@
+# ClassTable 插件配置文件
+
+# WakeUp API 端点
+WAKEUP_URL: https://不告诉你喵
+
+# API Token （如有）
+APITOKEN: 不告诉你喵
+
+# 是否开启@提醒功能，也就是有人被@时检测其上课状态并提醒
+AT_REMIND: false
+
+# Bot 名字，如果不填则使用Bot的QQ名字
+BOT_NAME: 

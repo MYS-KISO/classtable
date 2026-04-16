@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import plugin from "../../../lib/plugins/plugin.js"
 import { postJson } from "./utils.js"
+import config from "../utils/config.js"
 
 const DATA_DIR = path.join("./plugins", "classtable", "data")
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
@@ -94,13 +95,17 @@ export class classtableImport extends plugin {
    * @returns {Object} json数据
    */
   async getCourseScheduleFromApi(shareCode) {
-    const url = `https://不告诉你喵`
-    const token = `不告诉你喵`
+    const url = config.WAKEUP_URL
+    const token = config.APITOKEN
+
+    if (!url || !token) {
+      throw new Error("classtable 配置缺少 WAKEUP_URL 或 APITOKEN")
+    }
 
     try {
       const responseData = await postJson(url, {
         shareToken: shareCode,
-        apiToken: token
+        apiToken: token ? token : null
       }, 5000)
 
       if (!responseData || responseData.code !== 0 || responseData.message !== 'success' || !responseData.data) {

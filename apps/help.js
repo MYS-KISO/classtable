@@ -1,5 +1,6 @@
 import plugin from "../../../lib/plugins/plugin.js"
 import common from "../../../lib/common/common.js"
+import { getBotName } from "./utils.js"
 
 export class classtableHelp extends plugin {
   constructor() {
@@ -18,7 +19,7 @@ export class classtableHelp extends plugin {
   }
 
   async showMenu(e) {
-    const botName = Bot[e.self_id || Bot.uin]?.nickname || Bot.nickname || 'Bot'
+    const botName = await getBotName(e, 'Bot')
     const msg = [`课表插件使用帮助`]
 
     msg.push([`使用方法：`,

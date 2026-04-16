@@ -1,5 +1,6 @@
 import path from "node:path"
 import puppeteer from "../../../lib/puppeteer/puppeteer.js"
+import config from "../utils/config.js"
 
 /**
  * 渲染图片
@@ -10,8 +11,9 @@ import puppeteer from "../../../lib/puppeteer/puppeteer.js"
  */
 export async function renderImg(pluginName, tplName, data, e) {
   try {
+    const botName = await getBotName(e, 'Bot')
     const pluginResources = `./plugins/${pluginName}/resources`
-    const tplFile = `${pluginResources}/html/${tplName}.html`
+    const tplFile = `${pluginResources}/html/${tplName}.art`
     const _res_path = path.join(process.cwd(), 'plugins', pluginName, 'resources')
 
     const base64 = await puppeteer.screenshot(pluginName, {
@@ -20,6 +22,7 @@ export async function renderImg(pluginName, tplName, data, e) {
       tplFile,
       pluginResources,
       _res_path,
+      botName,
       ...data
     })
 
@@ -63,4 +66,8 @@ export async function postJson(url, data, timeout = 5000) {
   } finally {
     clearTimeout(timer)
   }
+}
+
+export async function getBotName(e, fallback = null) {
+  return Bot[e.self_id || Bot.uin]?.nickname || Bot.nickname || fallback || null
 }

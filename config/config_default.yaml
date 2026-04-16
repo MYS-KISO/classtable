@@ -3,11 +3,14 @@
 # WakeUp API 端点
 WAKEUP_URL: https://不告诉你喵
 
-# API Token （如有）
+# API Token（如有）
 APITOKEN: 不告诉你喵
 
-# 是否开启@提醒功能，也就是有人被@时检测其上课状态并提醒
+# 是否开启 @ 提醒功能
 AT_REMIND: false
 
-# Bot 名字，如果不填则使用Bot的QQ名字
-BOT_NAME: 
+# Bot 名字，如果不填则使用 Bot 的 QQ 名字
+BOT_NAME:
+
+# 更新镜像前缀（留空则默认 https://ghproxy.net/）
+UPDATE_MIRROR_URL: https://ghproxy.net/

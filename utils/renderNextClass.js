@@ -197,7 +197,7 @@ async function getMultipleNextClassRenderData(e, limit = null) {
     // 使用Promise.all并行处理用户数据
     const userPromises = userIds.map(async (userId) => {
       let userName = "未知用户"
-      let avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${userId}&s=100`
+      let avatarUrl = `https://q2.qlogo.cn/g?b=qq&nk=${userId}&s=100`
       try {
         const memberInfo = e.bot.gml.get(e.group_id)
         const member = memberInfo.get(Number(userId))

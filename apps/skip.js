@@ -98,7 +98,7 @@ export class classtableSkip extends plugin {
 
       // 如果没有当前课程，查找最近1小时内的下一节课
       if (!currentClass) {
-        const oneHourLater = new Date(currentTime.getTime() + 60 * 60 * 1000)
+        const oneHourLater = new Date(currentTime.getTime() + 12 * 60 * 60 * 1000)
 
         if (schedule[currentWeek] && schedule[currentWeek][currentDay]) {
           const todayClasses = []

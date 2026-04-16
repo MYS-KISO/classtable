@@ -132,22 +132,80 @@ export class classtableQuery extends plugin {
       // 按节次排序
       dayClasses.sort((a, b) => a.node - b.node)
 
-      // 合并连续相同课程
-      const mergedClasses = []
-      let current = null
-      for (const cls of dayClasses) {
-        if (current && 
-            current.courseId === cls.courseId && 
-            current.courseName === cls.courseName &&
-            current.endTime === cls.startTime) {
-          current.endTime = cls.endTime
-          current.nodeEnd = cls.node
-        } else {
-          if (current) mergedClasses.push(current)
-          current = { ...cls, nodeEnd: cls.node }
-        }
+      const parseMinutes = (time) => {
+        const [h, m] = String(time || '').split(':').map(n => parseInt(n, 10))
+        if (Number.isNaN(h) || Number.isNaN(m)) return Number.MAX_SAFE_INTEGER
+        return h * 60 + m
       }
-      if (current) mergedClasses.push(current)
+
+      const normalizeText = (text) => String(text || '').trim()
+
+      // 按“课程名+教师+教室”合并同一天内相同课程，时间取最早开始到最晚结束
+      const mergedMap = new Map()
+      for (const cls of dayClasses) {
+        const courseName = normalizeText(cls.courseName)
+        const teacher = normalizeText(cls.teacher)
+        const room = normalizeText(cls.room)
+        const mergeKey = `${courseName}__${teacher}__${room}`
+
+        if (!mergedMap.has(mergeKey)) {
+          mergedMap.set(mergeKey, {
+            ...cls,
+            nodeList: [cls.node],
+            firstNode: cls.node,
+            startMin: parseMinutes(cls.startTime),
+            endMin: parseMinutes(cls.endTime)
+          })
+          continue
+        }
+
+        const merged = mergedMap.get(mergeKey)
+        const startMin = parseMinutes(cls.startTime)
+        const endMin = parseMinutes(cls.endTime)
+
+        if (startMin < merged.startMin) {
+          merged.startMin = startMin
+          merged.startTime = cls.startTime
+        }
+        if (endMin > merged.endMin) {
+          merged.endMin = endMin
+          merged.endTime = cls.endTime
+        }
+
+        if (cls.node < merged.firstNode) {
+          merged.firstNode = cls.node
+        }
+        merged.nodeList.push(cls.node)
+      }
+
+      const mergedClasses = Array.from(mergedMap.values()).sort((a, b) => {
+        if (a.startMin !== b.startMin) return a.startMin - b.startMin
+        return a.firstNode - b.firstNode
+      })
+
+      const formatNodeStr = (nodeList) => {
+        const nodes = [...new Set(nodeList)].sort((a, b) => a - b)
+        if (nodes.length === 0) return ''
+
+        const parts = []
+        let rangeStart = nodes[0]
+        let prev = nodes[0]
+
+        for (let i = 1; i < nodes.length; i++) {
+          const node = nodes[i]
+          if (node === prev + 1) {
+            prev = node
+            continue
+          }
+
+          parts.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`)
+          rangeStart = node
+          prev = node
+        }
+
+        parts.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`)
+        return `第${parts.join('、')}节`
+      }
 
       // 生成合并转发消息
       const forwardMsgs = []
@@ -156,7 +214,7 @@ export class classtableQuery extends plugin {
       forwardMsgs.push(`${dateStr} 课程表\n第${week}周 周${weekDayStr}`)
       
       for (const cls of mergedClasses) {
-        const nodeStr = cls.node === cls.nodeEnd ? `第${cls.node}节` : `第${cls.node}-${cls.nodeEnd}节`
+        const nodeStr = formatNodeStr(cls.nodeList)
         const msg = `📚 ${cls.courseName}\n` +
                    `⏰ ${cls.startTime} - ${cls.endTime}（${nodeStr}）`
         forwardMsgs.push(msg)

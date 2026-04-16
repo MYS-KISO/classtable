@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import plugin from "../../../lib/plugins/plugin.js"
-import axios from "axios"
+import { postJson } from "./utils.js"
 
 const DATA_DIR = path.join("./plugins", "classtable", "data")
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
@@ -98,18 +98,11 @@ export class classtableImport extends plugin {
     const token = `不告诉你喵`
 
     try {
-      const response = await axios.post(
-        url,
-        {
-          shareToken: shareCode,
-          apiToken: token
-        },
-        {
-          timeout: 5000
-        }
-      )
+      const responseData = await postJson(url, {
+        shareToken: shareCode,
+        apiToken: token
+      }, 5000)
 
-      const responseData = response?.data
       if (!responseData || responseData.code !== 0 || responseData.message !== 'success' || !responseData.data) {
         return responseData
       }

@@ -33,3 +33,34 @@ export async function renderImg(pluginName, tplName, data, e) {
     return false
   }
 }
+
+/**
+ * 发送 JSON POST 请求
+ * @param {string} url 请求地址
+ * @param {object} data 请求体
+ * @param {number} timeout 超时时间(ms)
+ * @returns {Promise<any>}
+ */
+export async function postJson(url, data, timeout = 5000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data),
+      signal: controller.signal
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    return await response.json()
+  } finally {
+    clearTimeout(timer)
+  }
+}

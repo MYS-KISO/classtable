@@ -19,11 +19,23 @@ export class classtableSkip extends plugin {
       priority: 10,
       rule: [
         {
-          reg: '^(什么(水|专业|普通|神人|sb|b)课(，)?翘了(！)?|#?clsskip)$',
+          reg: '^什么.*课(，)?翘了(！)?$',
           fnc: 'skipClass'
         },
         {
-          reg: '^(哎不翘了(还是)?|#?clscancel)$',
+          reg: '^#?clsskip$',
+          fnc: 'skipClass'
+        },
+        {
+          reg: '^翘了！$',
+          fnc: 'skipClass'
+        },
+        {
+          reg: '^哎不翘了(还是)?$',
+          fnc: 'cancelSkipClass'
+        },
+        {
+          reg: '^#?clscancel$',
           fnc: 'cancelSkipClass'
         }
       ]

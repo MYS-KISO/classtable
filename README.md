@@ -37,7 +37,7 @@ git clone --depth=1 https://github.com/Pimeng/classtable.git ./plugin/classtable
 > [!CAUTION]
 > 因 Wakeup 课程表的API更新，旧API无法正常导入课程表，新API接口因复杂难请求，且获取麻烦，不会考虑重新开放公共服务，暂定使用反代接口，如有需要请联系插件作者获取，https://github.com/Pimeng （免费，仅供学习使用，禁止商业用途）
 
-- 拾光课程表（仅支持文件导入导出）
+- 拾光课程表：https://github.com/XingHeYuZhuan/shiguangschedule
 
 ## 使用方法
 

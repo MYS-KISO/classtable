@@ -41,7 +41,7 @@ export function supportGuoba() {
       schemas: [
         {
           component: "SOFT_GROUP_BEGIN",
-          label: "WakeUp API"
+          label: "课表请求API"
         },
         {
           field: "WAKEUP_URL",
@@ -82,7 +82,7 @@ export function supportGuoba() {
         },
         {
           field: "UPDATE_MIRROR_URL",
-          label: "更新镜像前缀",
+          label: "GitHub 镜像地址",
           bottomHelpMessage: "留空默认使用 https://ghproxy.net/",
           component: "Input",
           componentProps: {
@@ -108,8 +108,8 @@ export function supportGuoba() {
 
           writeUserConfig(nextConfig)
           initClasstableConfig()
-          logger.mark("[ClassTable] 锅巴配置保存成功")
-          return Result.ok({}, "保存成功")
+          logger.mark("[ClassTable] 锅巴更新配置")
+          return Result.ok({}, "保存成功，立即生效喵")
         } catch (err) {
           logger.error(`[ClassTable] 锅巴配置保存失败: ${err}`)
           return Result.ok({}, `保存失败: ${err?.message || err}`)

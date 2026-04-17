@@ -4,7 +4,7 @@ Miao-Yunzai 机器人课程表插件，支持 WakeUp 课程表导入。
 
 ## 如何安装？
 
-1. Git安装
+方法1. Git安装
 
 ```bash
 git clone --depth=1 https://github.com/Pimeng/classtable.git ./plugin/classtable
@@ -17,7 +17,9 @@ git clone --depth=1 https://github.com/Pimeng/classtable.git ./plugin/classtable
 
 克隆完毕后重启 Yunzai 就可以使用了
 
-2. 压缩包安装
+> 对的没有依赖，放到插件目录就能用（
+
+方法2. 压缩包安装
 
 直接下载压缩包然后解压到插件目录 `./plugins/classtable`（注意重命名为 `classtable`）
 在右上方有个绿色的 `Code` 按钮，点击，然后选择 `Download ZIP`
@@ -28,9 +30,13 @@ git clone --depth=1 https://github.com/Pimeng/classtable.git ./plugin/classtable
 - 支持群聊和私聊使用
 - 支持导出课表
 
-## 支持的APP
+## 支持的应用
 
 - Wakeup 课程表（支持分享口令，文件导出）
+
+> [!CAUTION]
+> 因 Wakeup 课程表的API更新，旧API无法正常导入课程表，新API接口因复杂难请求，且获取麻烦，不会考虑重新开放公共服务，暂定使用反代接口，如有需要请联系插件作者获取，https://github.com/Pimeng （免费，仅供学习使用，禁止商业用途）
+
 - 拾光课程表（仅支持文件导入导出）
 
 ## 使用方法

@@ -1,3 +1,10 @@
+> [!tip]
+> 本插件仍在测试，如果你不是受 @Pimeng 邀请来测试这个插件的，请不要安装这个插件！！有可能被植入恶意代码！！
+> 
+> 本项目fork自 Github@Pimeng/classtable ，依据上游开源协议GPL-3.0进行分发，由 @MYS-KISO 做部分修改；同时作为滢尝试边学边改的产物，或可能会出现影响使用的bug，不建议直接用于公众环境。
+
+> 【沁清滢综运//ExuQy_OS】愿每个人都可以被这个世界温柔以待。
+
 # ClassTable Plugin
 
 Miao-Yunzai 机器人课程表插件，支持 WakeUp 课程表导入。
@@ -54,3 +61,5 @@ git clone --depth=1 https://github.com/Pimeng/classtable.git ./plugin/classtable
 #### 拾光课程表
 
 文件导出之后发给Bot即可（
+
+- 请使用 #clshelp 查看（才不是某只屑滢懒得再写一遍（哼

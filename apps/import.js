@@ -32,10 +32,6 @@ export class classtableImport extends plugin {
           fnc: "prepareJsonImport"
         },
         {
-          reg: "^.*$",
-          fnc: "receiveScheduleFile"
-        },
-        {
           reg: "^这是来自「WakeUp课程表」的课表分享",
           fnc: "importWakeUpSchedule"
         }

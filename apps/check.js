@@ -8,6 +8,7 @@ import {
 } from "../utils/cache.js"
 import { findNextClass } from "../utils/renderNextClass.js"
 import { parseTimeString } from "../utils/time.js"
+import config from "../utils/config.js"
 
 const USER_DATA_DIR = path.join("./plugins", "classtable", "data", "users")
 
@@ -34,6 +35,7 @@ export class classtableCheck extends plugin {
    */
   async checkAtUserClassStatus(e) {
     if (!e.isGroup) return false
+    if (!config.AT_REMIND) return false
     const atMessages = e.message.filter(m => m.type === 'at')
     if (atMessages.length === 0) {
       return false

@@ -6,6 +6,9 @@ data/groups/*
 !data/groups/.gitkeep
 !data/users/.gitkeep
 
+config/*
+!config/config_default.yaml
+
 pnpm-*.yaml
 package-lock.json
 

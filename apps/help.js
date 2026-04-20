@@ -1,11 +1,13 @@
 import plugin from "../../../lib/plugins/plugin.js"
+import common from "../../../lib/common/common.js"
+import { getBotName } from "./utils.js"
 
 export class classtableHelp extends plugin {
   constructor() {
     super({
-      name: 'classtable:帮助',
-      dsc: '课表插件帮助',
-      event: 'message',
+      name: "classtable:帮助",
+      dsc: "课程表插件帮助",
+      event: "message",
       priority: 10,
       rule: [
         {
@@ -17,19 +19,43 @@ export class classtableHelp extends plugin {
   }
 
   async showMenu(e) {
-    const msg = `课表插件使用帮助\n` +
-      `使用方法：\n` +
-      `1. 打开wakeup课程表APP，点击右上角按钮\n` +
-      `2. 复制分享口令，全部内容直接发送在群里\n` +
-      `3. 导入成功后，Bot会自动撤回分享口令\n` +
-      `查看群友目前在不在上课：\n` +
-      `- 【所有群友在上什么课|#clstba】- 显示群内所有人的上课情况\n` +
-      `- 【群友在上什么课|#clstb】- 只显示目前状态中前10的人\n` +
-      `查询指定日期课表：\n` +
-      `- 【今日课表/明日课表/后日课表/昨日课表】- 查询相对日期课表\n` +
-      `- 【YYYY-MM-DD课表】- 查询指定日期课表（如：2025-04-01课表）\n` +
-      `翘课：发送【什么水课，翘了！|#clsskip】、\n` +
-      `取消翘课：发送【哎不翘了(还是)|#clsunskip】`
-    await e.reply(msg)
+    const botName = await getBotName(e, "Bot")
+    const msg = ["课程表插件使用帮助"]
+
+    msg.push([
+      "导入课表：",
+      `1. 发送 WakeUp 完整分享口令给 ${botName}，会自动识别导入。`,
+      "2. 发送 `#导入课表` 后再上传 JSON 文件，支持插件标准格式和拾光格式。",
+      "3. 如果收到文件名以 `classtable-` 开头的 JSON 文件，直接发送给 Bot 也会自动导入。"
+    ].join("\n"))
+
+    msg.push([
+      "导出课表：",
+      "- 【#导出课表】导出插件标准格式 JSON",
+      "- 【#导出课表 拾光】导出拾光格式 JSON",
+      "- 群聊中需要再发送 【#确认导出课表】，或用 【#取消导出课表】 终止"
+    ].join("\n"))
+
+    msg.push([
+      "课表查询：",
+      "- 【今日课表 / 明日课表 / 后日课表 / 昨日课表】",
+      "- 【YYYY-MM-DD课表】",
+      "- 【查课表 YYYY-MM-DD】"
+    ].join("\n"))
+
+    msg.push([
+      "群内状态：",
+      "- 【所有群友在上什么课|#clstba】显示群内所有人的上课情况\n" +
+      "- 【群友在上什么课|#clstb】只显示目前状态中前10的人\n" +
+    ].join("\n"))
+
+    msg.push([
+      "翘课功能：",
+      "- 【什么水课，翘了！】 或 【#clsskip】",
+      "- 【哈不翘了还是】 或 【#clsunskip】"
+    ].join("\n"))
+
+    const forwardMsg = await common.makeForwardMsg(e, msg, "课程表插件使用帮助")
+    await e.reply(forwardMsg)
   }
 }

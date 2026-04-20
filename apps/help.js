@@ -20,11 +20,11 @@ export class classtableHelp extends plugin {
 
   async showMenu(e) {
     const botName = await getBotName(e, "Bot")
-    const msg = ["课程表插件使用帮助"]
+    const msg = []
 
     msg.push([
       "导入课表：",
-      "方法1. 发送 WakeUp 完整分享口令给 ${botName}，会自动识别导入。",
+      "方法1. 发送 WakeUp 完整分享口令给bot，会自动识别导入。",
       "方法2. 发送 `#导入课表` 后再上传 JSON 文件，支持插件标准格式和拾光格式。",
     ].join("\n"))
 
@@ -45,7 +45,7 @@ export class classtableHelp extends plugin {
     msg.push([
       "群内状态：",
       "- 【所有群友在上什么课|#clstba】显示群内所有人的上课情况\n" +
-      "- 【群友在上什么课|#clstb】只显示目前状态中前10的人\n"
+      "- 【群友在上什么课|#clstb】只显示目前状态中前10的人"
     ].join("\n"))
 
     msg.push([
